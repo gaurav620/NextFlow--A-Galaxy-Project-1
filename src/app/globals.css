@@ -1,26 +1,58 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #fafafa;
+  --foreground: #18181b;
+  --border: #e4e4e7;
+  --muted: #71717a;
+  --accent: #7c3aed;
+  --accent-amber: #f59e0b;
+  --accent-blue: #3b82f6;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-border: var(--border);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --font-sans: var(--font-sans);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
+html, body { height: 100%; }
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), Inter, system-ui, -apple-system, sans-serif;
+}
+
+/* React Flow dot grid */
+.react-flow__background.galaxy-dots {
+  background-color: #fafafa;
+}
+
+/* Animated dashed flow edges */
+.react-flow__edge-path {
+  stroke-width: 2;
+}
+
+/* Pulsating glow used on running nodes */
+@keyframes nf-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(124, 58, 237, 0.55), 0 0 30px 0 rgba(124, 58, 237, 0.45); }
+  50% { box-shadow: 0 0 0 8px rgba(124, 58, 237, 0), 0 0 50px 6px rgba(124, 58, 237, 0.35); }
+}
+.nf-running { animation: nf-pulse 1.4s ease-in-out infinite; }
+
+/* Subtle card */
+.nf-card {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 1px 2px rgba(0,0,0,.04), 0 4px 12px rgba(0,0,0,.04);
+}
+
+/* Slide-up animation for node picker */
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(12px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
