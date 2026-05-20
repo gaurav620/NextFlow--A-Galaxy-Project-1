@@ -116,10 +116,10 @@ export const useCanvas = create<CanvasState>((set, get) => ({
     const handleId = conn.sourceHandle ?? undefined;
     let stroke = "#7c3aed"; // default purple
     if (handleId) {
-      if (handleId.startsWith("image") || handleId === "Input Image" || handleId === "Output Image") stroke = "#f59e0b";
-      else if (handleId.startsWith("video")) stroke = "#ef4444";
-      else if (handleId.startsWith("audio")) stroke = "#10b981";
-      else if (handleId.startsWith("file")) stroke = "#8b5cf6";
+      if (handleId.startsWith("image") || handleId === "Input Image" || handleId === "Output Image" || handleId === "Image (Vision)") stroke = "#f59e0b";
+      else if (handleId.startsWith("video") || handleId === "Video") stroke = "#ef4444";
+      else if (handleId.startsWith("audio") || handleId === "Audio") stroke = "#10b981";
+      else if (handleId.startsWith("file") || handleId === "File") stroke = "#8b5cf6";
       else stroke = "#3b82f6"; // text = blue
     }
     set({
