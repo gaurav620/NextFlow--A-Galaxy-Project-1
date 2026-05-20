@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { useReactFlow } from "@xyflow/react";
-import { Search, Crop, Sparkles, X } from "lucide-react";
+import { Search, Crop, Sparkles, X, Film, Mic, FileText, Globe, ImageIcon, Volume2, Clapperboard } from "lucide-react";
 import { useCanvas } from "@/stores/canvas";
 import type { NodeKind } from "@/lib/types";
 
@@ -18,6 +18,15 @@ interface Item {
 const ITEMS: Item[] = [
   { kind: "crop-image", label: "Crop Image", category: "Image", enabled: true, Icon: Crop, description: "Crop an image to a region." },
   { kind: "gemini", label: "Gemini 2.5 Flash", category: "LLM", enabled: true, Icon: Sparkles, description: "Run a Google Gemini prompt." },
+  // Coming-soon items
+  { kind: "crop-image" as NodeKind, label: "Image Resize", category: "Image", enabled: false, Icon: ImageIcon, description: "Resize an image to a specific dimension." },
+  { kind: "crop-image" as NodeKind, label: "Background Remove", category: "Image", enabled: false, Icon: ImageIcon, description: "Remove background from an image using AI." },
+  { kind: "crop-image" as NodeKind, label: "Video Generation", category: "Video", enabled: false, Icon: Film, description: "Generate video from text prompt." },
+  { kind: "crop-image" as NodeKind, label: "Video Captioning", category: "Video", enabled: false, Icon: Clapperboard, description: "Auto-generate captions for video." },
+  { kind: "crop-image" as NodeKind, label: "Text to Speech", category: "Audio", enabled: false, Icon: Volume2, description: "Convert text to natural speech." },
+  { kind: "crop-image" as NodeKind, label: "Audio Transcription", category: "Audio", enabled: false, Icon: Mic, description: "Transcribe audio to text." },
+  { kind: "crop-image" as NodeKind, label: "PDF Parser", category: "Others", enabled: false, Icon: FileText, description: "Extract text from PDF documents." },
+  { kind: "crop-image" as NodeKind, label: "Web Scraper", category: "Others", enabled: false, Icon: Globe, description: "Scrape and extract content from URLs." },
 ];
 
 interface Props {
@@ -107,7 +116,7 @@ export function NodePicker({ open, onClose }: Props) {
                   <div className="text-xs text-neutral-500 truncate">{item.description}</div>
                 </div>
                 <span className="text-[10px] uppercase tracking-wider text-neutral-400">
-                  {item.category}
+                  {item.enabled ? item.category : "Coming Soon"}
                 </span>
               </button>
             ))

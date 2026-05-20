@@ -38,10 +38,10 @@ interface Props {
 
 function handleTypeFor(nodeKind: NodeKind, handleId: string | undefined): string {
   if (!handleId) return "any";
-  if (handleId.startsWith("image") || handleId === "vision" || handleId === "Input Image" || handleId === "Output Image") return "image";
-  if (handleId.startsWith("video")) return "video";
-  if (handleId.startsWith("audio")) return "audio";
-  if (handleId.startsWith("file")) return "file";
+  if (handleId.startsWith("image") || handleId === "vision" || handleId === "Input Image" || handleId === "Output Image" || handleId === "Image (Vision)") return "image";
+  if (handleId.startsWith("video") || handleId === "Video") return "video";
+  if (handleId.startsWith("audio") || handleId === "Audio") return "audio";
+  if (handleId.startsWith("file") || handleId === "File") return "file";
   return "text";
 }
 
@@ -128,7 +128,7 @@ function CanvasInner({ workflowId, name: initialName, graph }: Props) {
     };
   }, [dirty, nodes, edges, name, workflowId, clearDirty]);
 
-  // Keyboard shortcuts: undo/redo + fit-view (F)
+  // Keyboard shortcuts: undo/redo + fit-view (F) + delete guard
   const rfInstance = useReactFlow();
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -139,10 +139,21 @@ function CanvasInner({ workflowId, name: initialName, graph }: Props) {
       if (meta && e.key === "z" && !e.shiftKey) { e.preventDefault(); undo(); }
       else if (meta && ((e.key === "z" && e.shiftKey) || e.key === "y")) { e.preventDefault(); redo(); }
       else if (e.key === "f" || e.key === "F") { e.preventDefault(); rfInstance.fitView({ padding: 0.2 }); }
+      else if (e.key === "Backspace" || e.key === "Delete") {
+        // Guard: prevent deleting Request-Inputs and Response nodes
+        const selected = nodes.filter((n) => n.selected);
+        const guarded = selected.filter(
+          (n) => n.type === "request-inputs" || n.type === "response"
+        );
+        if (guarded.length > 0 && selected.length === guarded.length) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      }
     };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [undo, redo, rfInstance]);
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, [undo, redo, rfInstance, nodes]);
 
   const isValidConnection = useCallback<IsValidConnection>((conn) => {
     const c = conn as Connection;

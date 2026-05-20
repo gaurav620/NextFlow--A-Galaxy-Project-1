@@ -19,7 +19,7 @@ export function GeminiNode({ id, data }: NodeProps) {
   return (
     <NodeShell
       id={id}
-      title=""
+      title={d.model || "Gemini 2.5 Flash"}
       width={340}
       badge={
         <>
