@@ -79,9 +79,9 @@ export function useRun(workflowId: string) {
         // 2. Open the SSE stream to receive execution events
         const streamRes = await fetch(`/api/runs/${runId}/stream`);
         if (!streamRes.ok || !streamRes.body) {
-          // If stream fails, poll the DB for completion
+          // If stream fails, poll the DB for completion and read results
           console.warn("Stream unavailable, falling back to poll");
-          await pollForCompletion(runId);
+          await pollForCompletion(runId, handleEvent);
           return;
         }
 
@@ -130,14 +130,46 @@ export function useRun(workflowId: string) {
   return { running, run };
 }
 
-/** Poll the DB for run completion (fallback when SSE is unavailable) */
-async function pollForCompletion(runId: string): Promise<void> {
+/** Poll the DB for run completion and emit events from node results */
+async function pollForCompletion(
+  runId: string,
+  handleEvent: (evt: ServerEvent) => void
+): Promise<void> {
+  const seen = new Set<string>();
   for (let i = 0; i < 120; i++) {
-    await new Promise((r) => setTimeout(r, 2000));
+    await new Promise((r) => setTimeout(r, 1500));
     try {
       const res = await fetch(`/api/runs/${runId}`);
       if (!res.ok) continue;
-      const data = (await res.json()) as { run: { status: string } };
+      const data = (await res.json()) as {
+        run: {
+          status: string;
+          nodeRuns: {
+            nodeId: string;
+            nodeType: string;
+            status: string;
+            output: unknown;
+            error: string | null;
+          }[];
+        };
+      };
+
+      // Emit events for any newly completed nodes
+      for (const nr of data.run.nodeRuns) {
+        if (seen.has(nr.nodeId)) continue;
+        if (nr.status === "running" && !seen.has(`start-${nr.nodeId}`)) {
+          seen.add(`start-${nr.nodeId}`);
+          handleEvent({ type: "node-start", nodeId: nr.nodeId });
+        }
+        if (nr.status === "success") {
+          seen.add(nr.nodeId);
+          handleEvent({ type: "node-finish", nodeId: nr.nodeId, output: nr.output });
+        } else if (nr.status === "error") {
+          seen.add(nr.nodeId);
+          handleEvent({ type: "node-error", nodeId: nr.nodeId, error: nr.error ?? "Unknown error" });
+        }
+      }
+
       if (data.run.status !== "running") return;
     } catch {
       // ignore
