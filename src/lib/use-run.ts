@@ -6,7 +6,8 @@ import { useCanvas } from "@/stores/canvas";
 type Scope = "full" | "partial" | "single";
 
 interface ServerEvent {
-  type: "hello" | "node-start" | "node-finish" | "node-error" | "run-finish";
+  type: "hello" | "node-start" | "node-finish" | "node-error" | "run-finish" | "run-error";
+  runId?: string;
   nodeId?: string;
   output?: unknown;
   error?: string;
@@ -63,58 +64,57 @@ export function useRun(workflowId: string) {
 
       setRunning(true);
       try {
-        // 1. Start the run (returns runId)
+        // POST /api/runs returns an SSE stream with execution events inline.
+        // The serverless function stays alive while execution runs.
         const res = await fetch("/api/runs", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ workflowId, scope, targetNodeIds }),
         });
+
         if (!res.ok) {
           const text = await res.text();
           console.error("Run start failed:", res.status, text);
           throw new Error(`run failed: ${res.status}`);
         }
-        const { runId } = (await res.json()) as { runId: string };
 
-        // 2. Open the SSE stream to receive execution events
-        const streamRes = await fetch(`/api/runs/${runId}/stream`);
-        if (!streamRes.ok || !streamRes.body) {
-          // If stream fails, poll the DB for completion and read results
-          console.warn("Stream unavailable, falling back to poll");
-          await pollForCompletion(runId, handleEvent);
-          return;
-        }
+        // Check if we got a streaming response
+        if (res.body) {
+          let runId: string | null = null;
+          await readSSEStream(res.body, (evt) => {
+            if (evt.type === "hello" && evt.runId) {
+              runId = evt.runId;
+            }
+            handleEvent(evt);
+          });
 
-        const reader = streamRes.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = "";
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split("\n");
-          buffer = lines.pop() ?? "";
-
-          for (const line of lines) {
-            if (!line.startsWith("data: ")) continue;
+          // If the stream ended early (before run-finish), poll for completion
+          if (runId) {
+            // Give a tiny delay then check if run is still active
+            await new Promise((r) => setTimeout(r, 500));
             try {
-              const evt = JSON.parse(line.slice(6)) as ServerEvent;
-              handleEvent(evt);
+              const checkRes = await fetch(`/api/runs/${runId}`);
+              if (checkRes.ok) {
+                const data = (await checkRes.json()) as { run: { status: string } };
+                if (data.run.status === "running") {
+                  console.warn("Stream ended but run still active, falling back to poll");
+                  await pollForCompletion(runId, handleEvent);
+                }
+              }
             } catch {
-              // ignore parse errors
+              // ignore
             }
           }
-        }
-
-        // Process remaining buffer
-        if (buffer.startsWith("data: ")) {
+        } else {
+          // Fallback: response has no body (shouldn't happen but handle gracefully)
+          // Try to parse as JSON
           try {
-            const evt = JSON.parse(buffer.slice(6)) as ServerEvent;
-            handleEvent(evt);
+            const json = await res.json() as { runId?: string };
+            if (json.runId) {
+              await pollForCompletion(json.runId, handleEvent);
+            }
           } catch {
-            // ignore
+            console.error("No stream body and no JSON — cannot read run results");
           }
         }
       } catch (err) {
@@ -128,6 +128,45 @@ export function useRun(workflowId: string) {
   );
 
   return { running, run };
+}
+
+/** Read an SSE stream from a ReadableStream body */
+async function readSSEStream(
+  body: ReadableStream<Uint8Array>,
+  onEvent: (evt: ServerEvent) => void
+): Promise<void> {
+  const reader = body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\n");
+    buffer = lines.pop() ?? "";
+
+    for (const line of lines) {
+      if (!line.startsWith("data: ")) continue;
+      try {
+        const evt = JSON.parse(line.slice(6)) as ServerEvent;
+        onEvent(evt);
+      } catch {
+        // ignore parse errors
+      }
+    }
+  }
+
+  // Process remaining buffer
+  if (buffer.startsWith("data: ")) {
+    try {
+      const evt = JSON.parse(buffer.slice(6)) as ServerEvent;
+      onEvent(evt);
+    } catch {
+      // ignore
+    }
+  }
 }
 
 /** Poll the DB for run completion and emit events from node results */
