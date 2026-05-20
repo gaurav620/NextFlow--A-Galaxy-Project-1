@@ -10,7 +10,6 @@ interface ServerEvent {
   nodeId?: string;
   output?: unknown;
   error?: string;
-  runId?: string;
 }
 
 export function useRun(workflowId: string) {
@@ -20,9 +19,33 @@ export function useRun(workflowId: string) {
   const updateNodeData = useCanvas((s) => s.updateNodeData);
   const nodes = useCanvas((s) => s.nodes);
 
-  // Use a ref so the handler always reads the latest nodes
   const nodesRef = useRef(nodes);
   nodesRef.current = nodes;
+
+  const handleEvent = useCallback(
+    (evt: ServerEvent) => {
+      if (evt.type === "node-start" && evt.nodeId) {
+        markRunning(evt.nodeId, true);
+      } else if (evt.type === "node-finish" && evt.nodeId) {
+        markRunning(evt.nodeId, false);
+        const latestNodes = nodesRef.current;
+        const node = latestNodes.find((n) => n.id === evt.nodeId);
+        if (!node) return;
+        if (node.type === "gemini") {
+          updateNodeData(evt.nodeId, { responseText: formatOutput(evt.output) });
+        } else if (node.type === "crop-image") {
+          const out = evt.output as { outputUrl?: string } | string | null;
+          const url = typeof out === "string" ? out : out?.outputUrl;
+          if (url) updateNodeData(evt.nodeId, { outputImageUrl: url });
+        } else if (node.type === "response") {
+          updateNodeData(evt.nodeId, { result: formatOutput(evt.output) });
+        }
+      } else if (evt.type === "node-error" && evt.nodeId) {
+        markRunning(evt.nodeId, false);
+      }
+    },
+    [markRunning, updateNodeData]
+  );
 
   const run = useCallback(
     async (overrideScope?: Scope) => {
@@ -40,24 +63,29 @@ export function useRun(workflowId: string) {
 
       setRunning(true);
       try {
-        // POST now returns an SSE stream directly (not JSON)
+        // 1. Start the run (returns runId)
         const res = await fetch("/api/runs", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ workflowId, scope, targetNodeIds }),
         });
-
         if (!res.ok) {
           const text = await res.text();
-          throw new Error(`run failed: ${res.status} ${text}`);
+          console.error("Run start failed:", res.status, text);
+          throw new Error(`run failed: ${res.status}`);
+        }
+        const { runId } = (await res.json()) as { runId: string };
+
+        // 2. Open the SSE stream to receive execution events
+        const streamRes = await fetch(`/api/runs/${runId}/stream`);
+        if (!streamRes.ok || !streamRes.body) {
+          // If stream fails, poll the DB for completion
+          console.warn("Stream unavailable, falling back to poll");
+          await pollForCompletion(runId);
+          return;
         }
 
-        if (!res.body) {
-          throw new Error("No response body");
-        }
-
-        // Read the SSE stream directly from the POST response
-        const reader = res.body.getReader();
+        const reader = streamRes.body.getReader();
         const decoder = new TextDecoder();
         let buffer = "";
 
@@ -80,7 +108,7 @@ export function useRun(workflowId: string) {
           }
         }
 
-        // Process any remaining data in buffer
+        // Process remaining buffer
         if (buffer.startsWith("data: ")) {
           try {
             const evt = JSON.parse(buffer.slice(6)) as ServerEvent;
@@ -96,42 +124,25 @@ export function useRun(workflowId: string) {
         setRunning(false);
       }
     },
-    [workflowId, running, setRunningIds, markRunning, updateNodeData]
-  );
-
-  const handleEvent = useCallback(
-    (evt: ServerEvent) => {
-      if (evt.type === "node-start" && evt.nodeId) {
-        markRunning(evt.nodeId, true);
-      } else if (evt.type === "node-finish" && evt.nodeId) {
-        markRunning(evt.nodeId, false);
-        const latestNodes = nodesRef.current;
-        const node = latestNodes.find((n) => n.id === evt.nodeId);
-        if (!node) return;
-        if (node.type === "gemini") {
-          updateNodeData(evt.nodeId, {
-            responseText: formatOutput(evt.output),
-          });
-        } else if (node.type === "crop-image") {
-          const out = evt.output as
-            | { outputUrl?: string }
-            | string
-            | null;
-          const url = typeof out === "string" ? out : out?.outputUrl;
-          if (url) updateNodeData(evt.nodeId, { outputImageUrl: url });
-        } else if (node.type === "response") {
-          updateNodeData(evt.nodeId, {
-            result: formatOutput(evt.output),
-          });
-        }
-      } else if (evt.type === "node-error" && evt.nodeId) {
-        markRunning(evt.nodeId, false);
-      }
-    },
-    [markRunning, updateNodeData]
+    [workflowId, running, setRunningIds, handleEvent]
   );
 
   return { running, run };
+}
+
+/** Poll the DB for run completion (fallback when SSE is unavailable) */
+async function pollForCompletion(runId: string): Promise<void> {
+  for (let i = 0; i < 120; i++) {
+    await new Promise((r) => setTimeout(r, 2000));
+    try {
+      const res = await fetch(`/api/runs/${runId}`);
+      if (!res.ok) continue;
+      const data = (await res.json()) as { run: { status: string } };
+      if (data.run.status !== "running") return;
+    } catch {
+      // ignore
+    }
+  }
 }
 
 /** Safely format any output value as a display string */

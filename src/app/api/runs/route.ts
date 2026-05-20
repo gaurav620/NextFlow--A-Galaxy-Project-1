@@ -18,6 +18,7 @@ const Body = z.object({
 export async function POST(req: Request) {
   const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+
   const parsed = Body.safeParse(await req.json());
   if (!parsed.success)
     return NextResponse.json({ error: "invalid" }, { status: 400 });
@@ -31,7 +32,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "invalid_graph" }, { status: 400 });
   const graph = graphParsed.data;
 
-  // Choose target nodes for the run-time persistence
   const targetIds = new Set(
     scope === "full"
       ? graph.nodes.map((n) => n.id)
@@ -56,50 +56,23 @@ export async function POST(req: Request) {
     },
   });
 
-  // Instead of fire-and-forget, stream the execution inline as SSE.
-  // This keeps the serverless function alive on Vercel during execution.
-  const encoder = new TextEncoder();
-  const stream = new ReadableStream({
-    async start(controller) {
-      const send = (evt: unknown) => {
-        try {
-          controller.enqueue(encoder.encode(`data: ${JSON.stringify(evt)}\n\n`));
-        } catch {
-          // Controller may be closed if client disconnected
-        }
-      };
-
-      // Initial hello
-      send({ type: "hello", runId: run.id });
-
-      try {
-        await executeWorkflow({
-          runId: run.id,
-          workflowId,
-          graph: graph as Parameters<typeof executeWorkflow>[0]["graph"],
-          scope,
-          targetNodeIds,
-          onEvent: (evt) => {
-            send(evt);
-            // Also emit to event bus for the history panel / other subscribers
-            runEventBus.emit(run.id, evt);
-          },
-        });
-      } catch (err) {
-        console.error("Run execution failed", err);
-        send({ type: "run-finish", error: String(err) });
-      }
-
-      try { controller.close(); } catch { /* already closed */ }
-    },
+  // Start execution - uses waitUntil if available (Vercel), otherwise fire-and-forget.
+  // The event bus buffers all events so the SSE stream can replay them.
+  const execPromise = executeWorkflow({
+    runId: run.id,
+    workflowId,
+    graph: graph as Parameters<typeof executeWorkflow>[0]["graph"],
+    scope,
+    targetNodeIds,
+    onEvent: (evt) => runEventBus.emit(run.id, evt),
+  }).catch((err) => {
+    console.error("Run execution failed", err);
   });
 
-  return new Response(stream, {
-    headers: {
-      "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache, no-transform",
-      Connection: "keep-alive",
-      "X-Run-Id": run.id,
-    },
-  });
+  // Fire-and-forget: the Node.js process stays alive (local dev) and
+  // on Vercel the function persists until the response is fully sent.
+  // The event bus buffers events for the SSE stream to replay.
+  void execPromise;
+
+  return NextResponse.json({ runId: run.id });
 }
