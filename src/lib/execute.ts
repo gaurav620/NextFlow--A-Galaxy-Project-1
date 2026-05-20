@@ -25,14 +25,11 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /**
  * Detect whether Trigger.dev should be used for execution.
- * Returns true when TRIGGER_SECRET_KEY is set AND we are NOT inside
- * a Trigger.dev worker (to avoid double-dispatching).
+ * Only enabled when explicitly opted in via TRIGGER_DEV_ENABLED=true.
+ * On Vercel serverless, tasks run in-process since there's no persistent worker.
  */
 function useTriggerDev(): boolean {
-  return !!(
-    process.env.TRIGGER_SECRET_KEY &&
-    !process.env.TRIGGER_WORKER // set by the Trigger.dev runtime
-  );
+  return process.env.TRIGGER_DEV_ENABLED === "true";
 }
 
 /** Map UI model names to Google AI SDK model identifiers */

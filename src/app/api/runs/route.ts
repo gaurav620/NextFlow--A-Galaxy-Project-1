@@ -56,24 +56,50 @@ export async function POST(req: Request) {
     },
   });
 
-  // Fire-and-forget with a small delay so the client can set up the SSE stream.
-  // Events are buffered in runEventBus so nothing is lost.
-  void (async () => {
-    // Give the client time to receive the runId and open the stream
-    await new Promise((r) => setTimeout(r, 100));
-    try {
-      await executeWorkflow({
-        runId: run.id,
-        workflowId,
-        graph: graph as Parameters<typeof executeWorkflow>[0]["graph"],
-        scope,
-        targetNodeIds,
-        onEvent: (evt) => runEventBus.emit(run.id, evt),
-      });
-    } catch (err) {
-      console.error("Run execution failed", err);
-    }
-  })();
+  // Instead of fire-and-forget, stream the execution inline as SSE.
+  // This keeps the serverless function alive on Vercel during execution.
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream({
+    async start(controller) {
+      const send = (evt: unknown) => {
+        try {
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify(evt)}\n\n`));
+        } catch {
+          // Controller may be closed if client disconnected
+        }
+      };
 
-  return NextResponse.json({ runId: run.id });
+      // Initial hello
+      send({ type: "hello", runId: run.id });
+
+      try {
+        await executeWorkflow({
+          runId: run.id,
+          workflowId,
+          graph: graph as Parameters<typeof executeWorkflow>[0]["graph"],
+          scope,
+          targetNodeIds,
+          onEvent: (evt) => {
+            send(evt);
+            // Also emit to event bus for the history panel / other subscribers
+            runEventBus.emit(run.id, evt);
+          },
+        });
+      } catch (err) {
+        console.error("Run execution failed", err);
+        send({ type: "run-finish", error: String(err) });
+      }
+
+      try { controller.close(); } catch { /* already closed */ }
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache, no-transform",
+      Connection: "keep-alive",
+      "X-Run-Id": run.id,
+    },
+  });
 }

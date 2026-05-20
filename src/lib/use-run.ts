@@ -10,6 +10,7 @@ interface ServerEvent {
   nodeId?: string;
   output?: unknown;
   error?: string;
+  runId?: string;
 }
 
 export function useRun(workflowId: string) {
@@ -19,7 +20,7 @@ export function useRun(workflowId: string) {
   const updateNodeData = useCanvas((s) => s.updateNodeData);
   const nodes = useCanvas((s) => s.nodes);
 
-  // Use a ref so the EventSource handler always reads the latest nodes
+  // Use a ref so the handler always reads the latest nodes
   const nodesRef = useRef(nodes);
   nodesRef.current = nodes;
 
@@ -39,100 +40,95 @@ export function useRun(workflowId: string) {
 
       setRunning(true);
       try {
+        // POST now returns an SSE stream directly (not JSON)
         const res = await fetch("/api/runs", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ workflowId, scope, targetNodeIds }),
         });
-        if (!res.ok) throw new Error(`run failed: ${res.status}`);
-        const { runId } = (await res.json()) as { runId: string };
 
-        // Poll for results instead of relying on EventSource timing
-        // This approach is more robust than SSE for fast-completing runs
-        const pollResults = async () => {
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error(`run failed: ${res.status} ${text}`);
+        }
+
+        if (!res.body) {
+          throw new Error("No response body");
+        }
+
+        // Read the SSE stream directly from the POST response
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() ?? "";
+
+          for (const line of lines) {
+            if (!line.startsWith("data: ")) continue;
+            try {
+              const evt = JSON.parse(line.slice(6)) as ServerEvent;
+              handleEvent(evt);
+            } catch {
+              // ignore parse errors
+            }
+          }
+        }
+
+        // Process any remaining data in buffer
+        if (buffer.startsWith("data: ")) {
           try {
-            const streamRes = await fetch(`/api/runs/${runId}/stream`);
-            if (!streamRes.ok || !streamRes.body) {
-              throw new Error("stream failed");
-            }
-
-            const reader = streamRes.body.getReader();
-            const decoder = new TextDecoder();
-            let buffer = "";
-
-            while (true) {
-              const { done, value } = await reader.read();
-              if (done) break;
-
-              buffer += decoder.decode(value, { stream: true });
-              const lines = buffer.split("\n");
-              buffer = lines.pop() ?? "";
-
-              for (const line of lines) {
-                if (!line.startsWith("data: ")) continue;
-                try {
-                  const evt = JSON.parse(line.slice(6)) as ServerEvent;
-                  handleEvent(evt);
-                } catch {
-                  // ignore parse errors
-                }
-              }
-            }
-
-            // Process any remaining data in buffer
-            if (buffer.startsWith("data: ")) {
-              try {
-                const evt = JSON.parse(buffer.slice(6)) as ServerEvent;
-                handleEvent(evt);
-              } catch {
-                // ignore
-              }
-            }
-          } catch (err) {
-            console.error("Stream error:", err);
-          } finally {
-            setRunningIds([]);
-            setRunning(false);
+            const evt = JSON.parse(buffer.slice(6)) as ServerEvent;
+            handleEvent(evt);
+          } catch {
+            // ignore
           }
-        };
-
-        const handleEvent = (evt: ServerEvent) => {
-          if (evt.type === "node-start" && evt.nodeId) {
-            markRunning(evt.nodeId, true);
-          } else if (evt.type === "node-finish" && evt.nodeId) {
-            markRunning(evt.nodeId, false);
-            // Always use the latest nodes from the store ref
-            const latestNodes = nodesRef.current;
-            const node = latestNodes.find((n) => n.id === evt.nodeId);
-            if (!node) return;
-            if (node.type === "gemini") {
-              updateNodeData(evt.nodeId, {
-                responseText: formatOutput(evt.output),
-              });
-            } else if (node.type === "crop-image") {
-              const out = evt.output as
-                | { outputUrl?: string }
-                | string
-                | null;
-              const url = typeof out === "string" ? out : out?.outputUrl;
-              if (url) updateNodeData(evt.nodeId, { outputImageUrl: url });
-            } else if (node.type === "response") {
-              updateNodeData(evt.nodeId, {
-                result: formatOutput(evt.output),
-              });
-            }
-          } else if (evt.type === "node-error" && evt.nodeId) {
-            markRunning(evt.nodeId, false);
-          }
-        };
-
-        void pollResults();
+        }
       } catch (err) {
-        console.error(err);
+        console.error("Run error:", err);
+      } finally {
+        setRunningIds([]);
         setRunning(false);
       }
     },
     [workflowId, running, setRunningIds, markRunning, updateNodeData]
+  );
+
+  const handleEvent = useCallback(
+    (evt: ServerEvent) => {
+      if (evt.type === "node-start" && evt.nodeId) {
+        markRunning(evt.nodeId, true);
+      } else if (evt.type === "node-finish" && evt.nodeId) {
+        markRunning(evt.nodeId, false);
+        const latestNodes = nodesRef.current;
+        const node = latestNodes.find((n) => n.id === evt.nodeId);
+        if (!node) return;
+        if (node.type === "gemini") {
+          updateNodeData(evt.nodeId, {
+            responseText: formatOutput(evt.output),
+          });
+        } else if (node.type === "crop-image") {
+          const out = evt.output as
+            | { outputUrl?: string }
+            | string
+            | null;
+          const url = typeof out === "string" ? out : out?.outputUrl;
+          if (url) updateNodeData(evt.nodeId, { outputImageUrl: url });
+        } else if (node.type === "response") {
+          updateNodeData(evt.nodeId, {
+            result: formatOutput(evt.output),
+          });
+        }
+      } else if (evt.type === "node-error" && evt.nodeId) {
+        markRunning(evt.nodeId, false);
+      }
+    },
+    [markRunning, updateNodeData]
   );
 
   return { running, run };
