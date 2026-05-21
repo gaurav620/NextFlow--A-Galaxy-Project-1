@@ -45,7 +45,8 @@ export function GeminiNode({ id, data }: NodeProps) {
             onChange={(e) => updateNodeData(id, { prompt: e.target.value } as Partial<GeminiData>)}
             placeholder="Prompt…"
             rows={2}
-            className="w-full text-xs px-2 py-1 border border-neutral-200 rounded resize-none focus:outline-none focus:border-purple-400"
+            disabled={isConnected("Prompt")}
+            className="w-full text-xs px-2 py-1 border border-neutral-200 rounded resize-none focus:outline-none focus:border-purple-400 disabled:bg-neutral-50 disabled:text-neutral-400"
           />
         </FieldRow>
         <FieldRow label="System Prompt" type="text" side="left" handleId="System Prompt" connected={isConnected("System Prompt")}>
@@ -54,7 +55,8 @@ export function GeminiNode({ id, data }: NodeProps) {
             onChange={(e) => updateNodeData(id, { systemPrompt: e.target.value } as Partial<GeminiData>)}
             placeholder="System prompt…"
             rows={2}
-            className="w-full text-xs px-2 py-1 border border-neutral-200 rounded resize-none focus:outline-none focus:border-purple-400"
+            disabled={isConnected("System Prompt")}
+            className="w-full text-xs px-2 py-1 border border-neutral-200 rounded resize-none focus:outline-none focus:border-purple-400 disabled:bg-neutral-50 disabled:text-neutral-400"
           />
         </FieldRow>
         <FieldRow label="Image (Vision)" type="image" side="left" handleId="Image (Vision)" connected={isConnected("Image (Vision)")}>

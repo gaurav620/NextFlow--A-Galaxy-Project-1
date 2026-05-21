@@ -51,6 +51,7 @@ export function CropImageNode({ id, data }: NodeProps) {
                   max={100}
                   value={d[key]}
                   onChange={onSlider(key)}
+                  disabled={isConnected(labelMap[key])}
                   className="flex-1 accent-purple-600"
                 />
                 <span className="text-[11px] tabular-nums text-neutral-500 w-8 text-right">
