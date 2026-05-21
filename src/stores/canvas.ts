@@ -27,6 +27,8 @@ interface CanvasState {
   edges: FlowEdge[];
   selectedIds: Set<string>;
   runningNodeIds: Set<string>;
+  isRunning: boolean;           // global running flag for UI
+  runRequest: string | null;    // nodeId to run, or 'full' for all
   past: HistoryEntry[];
   future: HistoryEntry[];
   dirty: boolean;
@@ -45,6 +47,9 @@ interface CanvasState {
   updateNodeData: (id: string, patch: Partial<NodeData>) => void;
   setRunning: (ids: string[]) => void;
   markRunning: (id: string, running: boolean) => void;
+  setIsRunning: (v: boolean) => void;
+  requestRun: (nodeId?: string) => void;  // called from node Run buttons
+  clearRunRequest: () => void;
   pushHistory: () => void;
   undo: () => void;
   redo: () => void;
@@ -83,6 +88,8 @@ export const useCanvas = create<CanvasState>((set, get) => ({
   edges: [],
   selectedIds: new Set(),
   runningNodeIds: new Set(),
+  isRunning: false,
+  runRequest: null,
   past: [],
   future: [],
   dirty: false,
@@ -160,13 +167,16 @@ export const useCanvas = create<CanvasState>((set, get) => ({
     });
   },
 
-  setRunning: (ids) => set({ runningNodeIds: new Set(ids) }),
+  setRunning: (ids) => set({ runningNodeIds: new Set(ids), isRunning: ids.length > 0 }),
   markRunning: (id, running) => {
     const next = new Set(get().runningNodeIds);
     if (running) next.add(id);
     else next.delete(id);
-    set({ runningNodeIds: next });
+    set({ runningNodeIds: next, isRunning: next.size > 0 });
   },
+  setIsRunning: (v) => set({ isRunning: v }),
+  requestRun: (nodeId) => set({ runRequest: nodeId ?? "full" }),
+  clearRunRequest: () => set({ runRequest: null }),
 
   pushHistory: () => {
     const { nodes, edges, past } = get();

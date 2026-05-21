@@ -23,6 +23,7 @@ import { CanvasTopBar } from "@/components/canvas/CanvasTopBar";
 import { CanvasBottomBar } from "@/components/canvas/CanvasBottomBar";
 import { CanvasSidebar } from "@/components/canvas/CanvasSidebar";
 import { HistoryPanel } from "@/components/history/HistoryPanel";
+import { useRun } from "@/lib/use-run";
 
 const nodeTypes = {
   "request-inputs": RequestInputsNode,
@@ -64,10 +65,21 @@ function CanvasInner({ workflowId, name: initialName, graph }: Props) {
   const clearDirty = useCanvas((s) => s.clearDirty);
   const undo = useCanvas((s) => s.undo);
   const redo = useCanvas((s) => s.redo);
+  const clearRunRequest = useCanvas((s) => s.clearRunRequest);
+  const runRequest = useCanvas((s) => s.runRequest);
+  const { run } = useRun(workflowId);
 
   const [showMinimap, setShowMinimap] = useState(true);
   const [showHistory, setShowHistory] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  // Listen for run requests from individual node Run buttons
+  useEffect(() => {
+    if (!runRequest) return;
+    clearRunRequest();
+    // 'full' means run all, otherwise it's a nodeId for partial run
+    run(runRequest === "full" ? "full" : "full"); // always full for now
+  }, [runRequest, clearRunRequest, run]);
 
   useEffect(() => {
     const nodesIn: FlowNode[] = graph.nodes.map((n) => ({

@@ -60,6 +60,54 @@ function resolveModelId(uiName?: string): string {
 // Node executors — in-process (local dev) versions
 // ---------------------------------------------------------------------------
 
+/**
+ * Read the value for a node input, correctly handling the case where
+ * the source node's output is an object (e.g. request-inputs returns
+ * { text_field: "...", image_field: "..." }) and we need the specific field
+ * identified by sourceHandle.
+ */
+function getInputValue(
+  results: Record<string, unknown>,
+  inputSpec: { source: string; sourceHandle?: string }
+): unknown {
+  const sourceOutput = results[inputSpec.source];
+  // If source output is an object and we have a sourceHandle, extract that key
+  if (
+    sourceOutput !== null &&
+    typeof sourceOutput === "object" &&
+    !Array.isArray(sourceOutput) &&
+    inputSpec.sourceHandle
+  ) {
+    const obj = sourceOutput as Record<string, unknown>;
+    const val = obj[inputSpec.sourceHandle];
+    if (val !== undefined) return val;
+    // Also try looking for any string value in the object (fallback)
+    const firstString = Object.values(obj).find((v) => typeof v === "string");
+    if (firstString !== undefined) return firstString;
+  }
+  return sourceOutput;
+}
+
+/** Safely convert input value to string */
+function inputStr(v: unknown): string {
+  if (v == null) return "";
+  if (typeof v === "string") return v;
+  if (typeof v === "number" || typeof v === "boolean") return String(v);
+  // Object/array — try JSON
+  try { return JSON.stringify(v); } catch { return ""; }
+}
+
+/** Extract image URL from an input value (string URL or {outputUrl/imageUrl}) */
+function inputImageUrl(v: unknown): string {
+  if (typeof v === "string") return v;
+  if (v && typeof v === "object") {
+    const o = v as Record<string, unknown>;
+    if (typeof o.outputUrl === "string") return o.outputUrl;
+    if (typeof o.imageUrl === "string") return o.imageUrl;
+  }
+  return "";
+}
+
 async function executeGemini(node: ExecNode, results: Record<string, unknown>) {
   const data = node.data as {
     prompt?: string;
@@ -70,21 +118,19 @@ async function executeGemini(node: ExecNode, results: Record<string, unknown>) {
   const sysInput = node.inputs["System Prompt"];
   const imageInput = node.inputs["Image (Vision)"];
 
+  // Use getInputValue to correctly read specific fields from source nodes
   const prompt = promptInput
-    ? String(results[promptInput.source] ?? "")
+    ? inputStr(getInputValue(results, promptInput))
     : data.prompt ?? "";
   const system = sysInput
-    ? String(results[sysInput.source] ?? "")
+    ? inputStr(getInputValue(results, sysInput))
     : data.systemPrompt ?? "";
-
-  // Resolve image URL from connected input
-  const rawImageOutput = imageInput ? results[imageInput.source] : undefined;
-  const imageUrl = typeof rawImageOutput === "string"
-    ? rawImageOutput
-    : (rawImageOutput as Record<string, unknown> | null)?.outputUrl as string ?? "";
+  const imageUrl = imageInput
+    ? inputImageUrl(getInputValue(results, imageInput))
+    : "";
 
   const modelId = resolveModelId(data.model);
-  console.log(`[execute] Gemini node=${node.id} model=${modelId} prompt="${prompt.slice(0, 60)}"`);
+  console.log(`[execute] Gemini node=${node.id} model=${modelId} prompt="${prompt.slice(0, 80)}"`);
 
   if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
     // Demo fallback when no key is set
@@ -131,13 +177,13 @@ async function executeGemini(node: ExecNode, results: Record<string, unknown>) {
 }
 
 async function executeCropImage(node: ExecNode, results: Record<string, unknown>) {
-  // Simulate processing time — short delay in dev, longer in prod
-  // The actual 30s wait is only required when using Trigger.dev tasks
   const delay = process.env.NODE_ENV === "production" ? 2_000 : 500;
   await sleep(delay);
-  const inputUrl = node.inputs["Input Image"]
-    ? String(results[node.inputs["Input Image"].source] ?? "")
-    : "";
+  // Use getInputValue to correctly extract image URL from source node output
+  const inputSpec = node.inputs["Input Image"];
+  const inputVal = inputSpec ? getInputValue(results, inputSpec) : undefined;
+  const inputUrl = inputImageUrl(inputVal);
+  console.log(`[execute] CropImage node=${node.id} inputUrl="${inputUrl.slice(0, 80)}"`);
   return inputUrl || "https://placehold.co/600x400?text=cropped";
 }
 

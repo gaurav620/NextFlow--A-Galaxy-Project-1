@@ -4,7 +4,7 @@ import { Handle, Position } from "@xyflow/react";
 import { useCanvas } from "@/stores/canvas";
 import { HANDLE_COLORS, type HandleType } from "@/lib/types";
 import { cn } from "@/lib/cn";
-import { Play, X } from "lucide-react";
+import { Play, X, Loader2 } from "lucide-react";
 
 export function TypedHandle({
   type,
@@ -31,6 +31,40 @@ export function TypedHandle({
         top,
       }}
     />
+  );
+}
+
+/**
+ * Functional "Run" button that appears in each node header.
+ * Clicking it dispatches a run request via the canvas store,
+ * which Canvas.tsx picks up and calls useRun.run("full").
+ */
+function NodeRunButton() {
+  const isRunning = useCanvas((s) => s.isRunning);
+  const requestRun = useCanvas((s) => s.requestRun);
+
+  return (
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        requestRun();
+      }}
+      disabled={isRunning}
+      title={isRunning ? "Workflow is running…" : "Run workflow"}
+      className={cn(
+        "inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded font-medium transition-all",
+        isRunning
+          ? "bg-neutral-100 text-neutral-400 cursor-not-allowed"
+          : "bg-emerald-50 text-emerald-700 hover:bg-emerald-100 active:scale-95"
+      )}
+    >
+      {isRunning ? (
+        <Loader2 size={9} className="animate-spin" />
+      ) : (
+        <Play size={9} fill="currentColor" />
+      )}
+      {isRunning ? "Running…" : "Run"}
+    </button>
   );
 }
 
@@ -69,11 +103,8 @@ export function NodeShell({
           <span className="truncate">{title}</span>
         </div>
         <div className="flex items-center gap-1.5 shrink-0 ml-2">
-          {badge ?? (
-            <span className="inline-flex items-center gap-1 text-[11px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 font-medium">
-              <Play size={9} fill="currentColor" /> Run
-            </span>
-          )}
+          {/* badge can be custom (e.g. Gemini model selector + run); fallback to the functional NodeRunButton */}
+          {badge ?? <NodeRunButton />}
           {closable && (
             <button
               className="p-0.5 rounded hover:bg-red-50 hover:text-red-500 text-neutral-400 transition-colors"

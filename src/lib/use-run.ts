@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback } from "react";
 import { useCanvas } from "@/stores/canvas";
 
 type Scope = "full" | "partial" | "single";
@@ -23,202 +23,135 @@ interface RunData {
 }
 
 export function useRun(workflowId: string) {
-  const [running, setRunning] = useState(false);
+  const isRunning = useCanvas((s) => s.isRunning);
+  const setIsRunning = useCanvas((s) => s.setIsRunning);
   const setRunningIds = useCanvas((s) => s.setRunning);
   const markRunning = useCanvas((s) => s.markRunning);
   const updateNodeData = useCanvas((s) => s.updateNodeData);
-  const nodes = useCanvas((s) => s.nodes);
-
-  const nodesRef = useRef(nodes);
-  nodesRef.current = nodes;
 
   const applyNodeResult = useCallback(
-    (nodeId: string, output: unknown) => {
-      const latestNodes = nodesRef.current;
-      const node = latestNodes.find((n) => n.id === nodeId);
-      if (!node) return;
-      if (node.type === "gemini") {
-        updateNodeData(nodeId, { responseText: formatOutput(output) });
-      } else if (node.type === "crop-image") {
-        const out = output as { outputUrl?: string } | string | null;
-        const url = typeof out === "string" ? out : out?.outputUrl;
-        if (url) updateNodeData(nodeId, { outputImageUrl: url });
-      } else if (node.type === "response") {
-        updateNodeData(nodeId, { result: formatOutput(output) });
+    (nodeId: string, nodeType: string, output: unknown) => {
+      const text = extractText(output);
+      const imageUrl = extractImageUrl(output);
+
+      if (nodeType === "gemini") {
+        if (text) updateNodeData(nodeId, { responseText: text });
+      } else if (nodeType === "crop-image") {
+        if (imageUrl) updateNodeData(nodeId, { outputImageUrl: imageUrl });
+      } else if (nodeType === "response") {
+        updateNodeData(nodeId, { result: text ?? formatOutput(output) });
       }
     },
     [updateNodeData]
   );
 
   const run = useCallback(
-    async (overrideScope?: Scope) => {
-      if (running) return;
-      const currentNodes = nodesRef.current;
-      const selected = currentNodes.filter((n) => n.selected).map((n) => n.id);
-      const scope: Scope =
-        overrideScope ??
-        (selected.length === 0
-          ? "full"
-          : selected.length === 1
-          ? "single"
-          : "partial");
-      const targetNodeIds = scope === "full" ? undefined : selected;
+    async (scope: Scope = "full", targetNodeId?: string) => {
+      if (isRunning) return;
+      if (!workflowId) return;
 
-      // Determine which node IDs will run
-      const targetIds = scope === "full"
-        ? currentNodes.map((n) => n.id)
-        : (targetNodeIds ?? []);
+      // Build targetNodeIds
+      const targetNodeIds: string[] | undefined =
+        targetNodeId ? [targetNodeId]
+        : scope === "full" ? undefined
+        : undefined;
 
-      setRunning(true);
+      // Mark all as running immediately
+      setIsRunning(true);
 
-      // Mark all nodes as running IMMEDIATELY (before POST returns)
-      // This gives instant visual feedback with the pulsating glow
-      targetIds.forEach((id) => markRunning(id, true));
-
-      let runId: string | null = null;
       try {
-        // POST /api/runs — this awaits the entire execution on the server
-        // (up to maxDuration=300s on Vercel Pro, 10s on Hobby)
-        // We use AbortController with a generous client-side timeout
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 290_000); // 290s client timeout
+        const timer = setTimeout(() => controller.abort(), 290_000);
 
         let res: Response;
         try {
           res = await fetch("/api/runs", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ workflowId, scope, targetNodeIds }),
+            body: JSON.stringify({
+              workflowId,
+              scope: targetNodeIds ? "partial" : "full",
+              targetNodeIds,
+            }),
             signal: controller.signal,
           });
-          clearTimeout(timeoutId);
+          clearTimeout(timer);
         } catch (fetchErr) {
-          clearTimeout(timeoutId);
-          const isTimeout = fetchErr instanceof Error && fetchErr.name === "AbortError";
-          if (isTimeout) {
-            // Vercel Hobby 10s timeout hit — execution may still be running in the background
-            // Fall through to polling with the runId we may have gotten
-            console.warn("[useRun] fetch timeout — will poll for results if we have a runId");
-          } else {
-            throw fetchErr;
+          clearTimeout(timer);
+          if (fetchErr instanceof Error && fetchErr.name === "AbortError") {
+            console.warn("[useRun] Request timeout");
           }
-          // We cannot recover runId from a timeout, mark all as done
-          setRunningIds([]);
-          setRunning(false);
           return;
         }
 
         if (!res.ok) {
-          const text = await res.text();
-          console.error("Run start failed:", res.status, text);
-
-          // Check if it's a timeout response from Vercel (504/524)
-          if (res.status === 504 || res.status === 524) {
-            // Execution may still be running — we need to poll
-            // But we don't have runId yet. Graceful degradation.
-            console.warn("[useRun] Gateway timeout from Vercel — execution may have completed");
-          }
-          throw new Error(`run failed: ${res.status}`);
+          const text = await res.text().catch(() => "");
+          console.error("[useRun] run start failed:", res.status, text);
+          return;
         }
 
         const data = (await res.json()) as { runId: string };
-        runId = data.runId;
-        console.log("[useRun] run completed, runId:", runId);
+        const runId = data.runId;
+        console.log("[useRun] run done, runId:", runId);
 
         // Fetch final results and apply to UI
-        await applyRunResults(runId, markRunning, applyNodeResult);
-
+        await applyFinalResults(runId, markRunning, applyNodeResult);
       } catch (err) {
-        console.error("Run error:", err);
-        // If we have a runId, try to poll for partial results
-        if (runId) {
-          try {
-            await applyRunResults(runId, markRunning, applyNodeResult);
-          } catch {
-            // ignore
-          }
-        }
+        console.error("[useRun] error:", err);
       } finally {
-        // Clear all running indicators
         setRunningIds([]);
-        setRunning(false);
+        setIsRunning(false);
       }
     },
-    [workflowId, running, setRunningIds, markRunning, applyNodeResult]
+    [workflowId, isRunning, setIsRunning, setRunningIds, markRunning, applyNodeResult]
   );
 
-  return { running, run };
+  return { running: isRunning, run };
 }
 
-/**
- * Fetch final run results from DB and apply to UI
- */
-async function applyRunResults(
+async function applyFinalResults(
   runId: string,
-  markRunning: (id: string, running: boolean) => void,
-  applyNodeResult: (nodeId: string, output: unknown) => void
-): Promise<void> {
+  markRunning: (id: string, v: boolean) => void,
+  applyNodeResult: (id: string, type: string, output: unknown) => void
+) {
   try {
     const res = await fetch(`/api/runs/${runId}`);
     if (!res.ok) return;
-
     const data = (await res.json()) as RunData;
     for (const nr of data.run.nodeRuns) {
       markRunning(nr.nodeId, false);
       if (nr.status === "success") {
-        applyNodeResult(nr.nodeId, nr.output);
+        applyNodeResult(nr.nodeId, nr.nodeType, nr.output);
       } else if (nr.status === "error") {
         console.error(`[run] node ${nr.nodeId} error:`, nr.error);
       }
     }
   } catch (err) {
-    console.warn("[applyRunResults] error:", err);
+    console.warn("[applyFinalResults]", err);
   }
 }
 
-/**
- * Poll the DB every 1.5s for run completion.
- * Used when POST returns early (e.g. Vercel Hobby 10s timeout hit).
- */
-export async function pollForResults(
-  runId: string,
-  markRunning: (id: string, running: boolean) => void,
-  applyNodeResult: (nodeId: string, output: unknown) => void
-): Promise<void> {
-  const completed = new Set<string>();
-  const started = new Set<string>();
-  const MAX_POLLS = 200;
-
-  for (let i = 0; i < MAX_POLLS; i++) {
-    await new Promise((r) => setTimeout(r, 1500));
-    try {
-      const res = await fetch(`/api/runs/${runId}`);
-      if (!res.ok) continue;
-
-      const data = (await res.json()) as RunData;
-      const { nodeRuns, status } = data.run;
-
-      for (const nr of nodeRuns) {
-        if (!started.has(nr.nodeId) && (nr.status === "running" || nr.status === "success" || nr.status === "error")) {
-          started.add(nr.nodeId);
-          markRunning(nr.nodeId, true);
-        }
-        if (completed.has(nr.nodeId)) continue;
-        if (nr.status === "success") {
-          completed.add(nr.nodeId);
-          markRunning(nr.nodeId, false);
-          applyNodeResult(nr.nodeId, nr.output);
-        } else if (nr.status === "error") {
-          completed.add(nr.nodeId);
-          markRunning(nr.nodeId, false);
-        }
-      }
-
-      if (status !== "running") return;
-    } catch {
-      // ignore
-    }
+function extractText(output: unknown): string | null {
+  if (typeof output === "string") return output || null;
+  if (output && typeof output === "object") {
+    const o = output as Record<string, unknown>;
+    if (typeof o.text === "string") return o.text;
+    if (typeof o.responseText === "string") return o.responseText;
+    if (typeof o.result === "string") return o.result;
   }
+  return null;
+}
+
+function extractImageUrl(output: unknown): string | null {
+  if (typeof output === "string" && (output.startsWith("http://") || output.startsWith("https://"))) {
+    return output;
+  }
+  if (output && typeof output === "object") {
+    const o = output as Record<string, unknown>;
+    if (typeof o.outputUrl === "string") return o.outputUrl;
+    if (typeof o.imageUrl === "string") return o.imageUrl;
+  }
+  return null;
 }
 
 function formatOutput(output: unknown): string {
