@@ -6,7 +6,9 @@ const isPublic = createRouteMatcher([
   "/api/trigger(.*)",
 ]);
 
-export default clerkMiddleware(async (auth, req) => {
+// Next.js 16 uses "proxy" instead of "middleware"
+// clerkMiddleware returns a function compatible with the proxy convention
+export const proxy = clerkMiddleware(async (auth, req) => {
   if (!isPublic(req)) {
     await auth.protect();
   }

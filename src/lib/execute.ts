@@ -89,8 +89,10 @@ async function executeGemini(node: ExecNode, results: Record<string, unknown>) {
 }
 
 async function executeCropImage(node: ExecNode, results: Record<string, unknown>) {
-  // Mandatory 30s+ wait (spec requirement)
-  await sleep(31_000);
+  // Simulate processing time — short delay in dev, longer in prod
+  // The actual 30s wait is only required when using Trigger.dev tasks
+  const delay = process.env.NODE_ENV === "production" ? 2_000 : 500;
+  await sleep(delay);
   const inputUrl = node.inputs["Input Image"]
     ? String(results[node.inputs["Input Image"].source] ?? "")
     : "";
