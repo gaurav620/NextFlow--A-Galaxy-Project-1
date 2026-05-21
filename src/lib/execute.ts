@@ -59,12 +59,17 @@ async function executeGemini(node: ExecNode, results: Record<string, unknown>) {
   };
   const promptInput = node.inputs["Prompt"];
   const sysInput = node.inputs["System Prompt"];
+  const imageInput = node.inputs["Image (Vision)"];
+
   const prompt = promptInput
     ? String(results[promptInput.source] ?? "")
     : data.prompt ?? "";
   const system = sysInput
     ? String(results[sysInput.source] ?? "")
     : data.systemPrompt ?? "";
+  const imageUrl = imageInput
+    ? String(results[imageInput.source] ?? "")
+    : "";
 
   if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
     // Demo fallback when no key is set
@@ -75,6 +80,30 @@ async function executeGemini(node: ExecNode, results: Record<string, unknown>) {
   const modelId = resolveModelId(data.model);
 
   try {
+    // Build messages array — support multimodal (image + text)
+    if (imageUrl && imageUrl.startsWith("http")) {
+      // Use URL directly (Gemini SDK accepts URL images)
+      const { generateText: genText } = await import("ai");
+      try {
+        const { text } = await genText({
+          model: google(modelId),
+          system: system || undefined,
+          messages: [{
+            role: "user",
+            content: [
+              { type: "image", image: new URL(imageUrl) },
+              { type: "text", text: prompt || "Describe this image." },
+            ],
+          }],
+        });
+        return text;
+      } catch (visionErr) {
+        // If vision fails (e.g. URL not accessible), fall through to text-only
+        console.warn("[execute] Vision failed, falling back to text-only:", visionErr);
+      }
+    }
+
+    // Text-only path
     const { text } = await generateText({
       model: google(modelId),
       system: system || undefined,
