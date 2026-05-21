@@ -14,9 +14,6 @@ const ALLOWED_TYPES = [
 /**
  * Create a single-use Uppy instance configured for Transloadit image uploads.
  * Call `.destroy()` when done (e.g., on component unmount).
- *
- * If Transloadit env vars are not set, falls back to a local object URL
- * (useful for development without Transloadit credentials).
  */
 export function createImageUppy(opts: {
   onComplete: (url: string) => void;
@@ -45,46 +42,51 @@ export function createImageUppy(opts: {
       },
     });
 
-    // Handle successful Transloadit assembly completion
     uppy.on("transloadit:complete", (assembly) => {
       console.log("[Transloadit] assembly complete:", assembly?.assembly_id);
+
+      // Try to find a URL from any result step
+      // Step order of preference: last processing step → :original
       const results = assembly?.results ?? {};
-      const allResults = Object.values(results).flat() as Array<{
-        ssl_url?: string;
-        url?: string;
-      }>;
+      const allResults = Object.values(results)
+        .flat() as Array<{ ssl_url?: string; url?: string; name?: string }>;
 
-      if (allResults.length === 0) {
-        // No results — the template might not have an export step
-        // Try to use the Transloadit CDN URL from uploads directly
-        console.warn("[Transloadit] No results from assembly. Check your template has an export/store step.");
-        opts.onError?.("Upload succeeded but template returned no results. Check your Transloadit template.");
-        return;
+      // Look for ssl_url first (Transloadit CDN), then url
+      for (const result of allResults) {
+        const url = result?.ssl_url ?? result?.url;
+        if (url && url.startsWith("http")) {
+          console.log("[Transloadit] Using result URL:", url.slice(0, 80));
+          opts.onComplete(url);
+          return;
+        }
       }
 
-      const firstResult = allResults[0];
-      const url = firstResult?.ssl_url ?? firstResult?.url;
-      if (url) {
-        console.log("[Transloadit] Got URL:", url);
-        opts.onComplete(url);
-      } else {
-        opts.onError?.("Upload succeeded but could not extract URL from result.");
+      // Fallback: try to get the URL from uploads field
+      const uploads = assembly?.uploads as Array<{ ssl_url?: string; url?: string }> | undefined;
+      if (uploads && uploads.length > 0) {
+        const uploadUrl = uploads[0]?.ssl_url ?? uploads[0]?.url;
+        if (uploadUrl) {
+          console.log("[Transloadit] Using upload URL (no results):", uploadUrl.slice(0, 80));
+          opts.onComplete(uploadUrl);
+          return;
+        }
       }
+
+      console.warn("[Transloadit] No URL found in assembly results:", JSON.stringify(results).slice(0, 200));
+      opts.onError?.("Upload processed but no image URL returned. Check your Transloadit template has an export step.");
     });
 
     uppy.on("transloadit:assembly-error", (assembly, error) => {
       console.error("[Transloadit] Assembly error:", error);
       opts.onError?.(`Transloadit error: ${error?.message ?? "Unknown error"}`);
     });
-  } else {
-    // Fallback: no Transloadit keys → use local object URL (dev mode only)
-    console.warn("[Uppy] NEXT_PUBLIC_TRANSLOADIT_AUTH_KEY or NEXT_PUBLIC_TRANSLOADIT_TEMPLATE_ID not set. Using local object URL fallback.");
 
+  } else {
+    // Fallback for dev: no Transloadit keys → use local object URL
+    console.warn("[Uppy] Transloadit keys not set — using dev object URL fallback.");
     uppy.on("file-added", (file) => {
       if (file.data instanceof Blob) {
-        const url = URL.createObjectURL(file.data);
-        console.log("[Uppy] Dev fallback — using object URL:", url);
-        opts.onComplete(url);
+        opts.onComplete(URL.createObjectURL(file.data));
       }
     });
   }
