@@ -35,15 +35,18 @@ function useTriggerDev(): boolean {
 /** Map UI model names to Google AI SDK model identifiers */
 function resolveModelId(uiName?: string): string {
   switch (uiName) {
+    // Per spec: "Gemini 3.1 Pro" is the label; maps to gemini-1.5-pro (free tier)
+    case "Gemini 3.1 Pro":
+      return "gemini-1.5-pro";
     case "Gemini 2.5 Flash":
-      return "gemini-2.5-flash";
+      return "gemini-2.5-flash-preview-05-20";
     case "Gemini 2.5 Pro":
-      return "gemini-2.5-pro";
+      return "gemini-2.5-pro-preview-05-06";
     case "Gemini 2.0 Flash":
       return "gemini-2.0-flash";
     default:
-      // Default to gemini-2.5-flash (most widely available)
-      return "gemini-2.5-flash";
+      // Default to gemini-1.5-pro (the spec default "Gemini 3.1 Pro")
+      return "gemini-1.5-pro";
   }
 }
 

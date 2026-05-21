@@ -37,6 +37,7 @@ export function TypedHandle({
 export function NodeShell({
   id,
   title,
+  icon,
   badge,
   running,
   closable = true,
@@ -45,6 +46,7 @@ export function NodeShell({
 }: {
   id: string;
   title: string;
+  icon?: React.ReactNode;
   badge?: React.ReactNode;
   running?: boolean;
   closable?: boolean;
@@ -62,22 +64,23 @@ export function NodeShell({
       style={{ width }}
     >
       <div className="flex items-center justify-between px-3 py-2 border-b border-neutral-100">
-        <div className="flex items-center gap-2 text-[13px] font-medium text-neutral-800">
-          <span>{title}</span>
+        <div className="flex items-center gap-1.5 text-[13px] font-semibold text-neutral-800 min-w-0">
+          {icon && <span className="shrink-0">{icon}</span>}
+          <span className="truncate">{title}</span>
         </div>
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 shrink-0 ml-2">
           {badge ?? (
-            <span className="inline-flex items-center gap-1 text-[11px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700">
+            <span className="inline-flex items-center gap-1 text-[11px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 font-medium">
               <Play size={9} fill="currentColor" /> Run
             </span>
           )}
           {closable && (
             <button
-              className="p-0.5 rounded hover:bg-neutral-100 text-neutral-400"
+              className="p-0.5 rounded hover:bg-red-50 hover:text-red-500 text-neutral-400 transition-colors"
               onClick={() =>
                 onNodesChange([{ id, type: "remove" }])
               }
-              title="Delete"
+              title="Delete node"
             >
               <X size={12} />
             </button>

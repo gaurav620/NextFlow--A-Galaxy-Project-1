@@ -64,7 +64,7 @@ function defaultDataFor(kind: NodeKind): NodeData {
       return { x: 0, y: 0, w: 100, h: 100 };
     case "gemini":
       return {
-        model: "Gemini 2.5 Flash",
+        model: "Gemini 3.1 Pro",
         prompt: "",
         systemPrompt: "",
         images: [],
