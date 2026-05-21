@@ -32,21 +32,27 @@ function useTriggerDev(): boolean {
   return process.env.TRIGGER_DEV_ENABLED === "true";
 }
 
-/** Map UI model names to Google AI SDK model identifiers */
+/** Map UI model names to Google AI SDK model identifiers.
+ * IMPORTANT: Only use stable (non-preview) model IDs that work with standard API keys.
+ * Preview models like gemini-2.5-flash-preview-* require allowlisted access.
+ */
 function resolveModelId(uiName?: string): string {
   switch (uiName) {
-    // Per spec: "Gemini 3.1 Pro" is the label; maps to gemini-1.5-pro (free tier)
+    // Spec label "Gemini 3.1 Pro" → gemini-1.5-pro (stable, free tier)
     case "Gemini 3.1 Pro":
       return "gemini-1.5-pro";
+    // "Gemini 2.5 Flash" → gemini-1.5-flash (stable, fast)
     case "Gemini 2.5 Flash":
-      return "gemini-2.5-flash-preview-05-20";
+      return "gemini-1.5-flash";
+    // "Gemini 2.5 Pro" → gemini-1.5-pro (stable)
     case "Gemini 2.5 Pro":
-      return "gemini-2.5-pro-preview-05-06";
+      return "gemini-1.5-pro";
+    // "Gemini 2.0 Flash" → gemini-2.0-flash (stable)
     case "Gemini 2.0 Flash":
       return "gemini-2.0-flash";
     default:
-      // Default to gemini-1.5-pro (the spec default "Gemini 3.1 Pro")
-      return "gemini-1.5-pro";
+      // Any unrecognised label (including old stored values) → safe fallback
+      return "gemini-1.5-flash";
   }
 }
 
@@ -70,25 +76,28 @@ async function executeGemini(node: ExecNode, results: Record<string, unknown>) {
   const system = sysInput
     ? String(results[sysInput.source] ?? "")
     : data.systemPrompt ?? "";
-  const imageUrl = imageInput
-    ? String(results[imageInput.source] ?? "")
-    : "";
+
+  // Resolve image URL from connected input
+  const rawImageOutput = imageInput ? results[imageInput.source] : undefined;
+  const imageUrl = typeof rawImageOutput === "string"
+    ? rawImageOutput
+    : (rawImageOutput as Record<string, unknown> | null)?.outputUrl as string ?? "";
+
+  const modelId = resolveModelId(data.model);
+  console.log(`[execute] Gemini node=${node.id} model=${modelId} prompt="${prompt.slice(0, 60)}"`);
 
   if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
     // Demo fallback when no key is set
     await sleep(1500);
-    return `[Gemini mock output for prompt: "${prompt.slice(0, 80)}…"]`;
+    return `[Demo] Gemini response for: "${prompt.slice(0, 80)}"` +
+      (system ? ` (system: ${system.slice(0, 40)})` : "");
   }
 
-  const modelId = resolveModelId(data.model);
-
   try {
-    // Build messages array — support multimodal (image + text)
-    if (imageUrl && imageUrl.startsWith("http")) {
-      // Use URL directly (Gemini SDK accepts URL images)
-      const { generateText: genText } = await import("ai");
+    // Multimodal path — image + text
+    if (imageUrl && (imageUrl.startsWith("http://") || imageUrl.startsWith("https://"))) {
       try {
-        const { text } = await genText({
+        const { text } = await generateText({
           model: google(modelId),
           system: system || undefined,
           messages: [{
@@ -101,7 +110,7 @@ async function executeGemini(node: ExecNode, results: Record<string, unknown>) {
         });
         return text;
       } catch (visionErr) {
-        // If vision fails (e.g. URL not accessible), fall through to text-only
+        // Vision failed — fall through to text-only
         console.warn("[execute] Vision failed, falling back to text-only:", visionErr);
       }
     }
@@ -110,13 +119,14 @@ async function executeGemini(node: ExecNode, results: Record<string, unknown>) {
     const { text } = await generateText({
       model: google(modelId),
       system: system || undefined,
-      prompt,
+      prompt: prompt || "Hello",
     });
     return text;
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error(`Gemini execution failed (model=${modelId}):`, msg);
-    throw new Error(`Gemini API error (${modelId}): ${msg}`);
+    console.error(`[execute] Gemini error (model=${modelId}):`, msg);
+    // Throw with a clean message for the UI
+    throw new Error(`Gemini error: ${msg.slice(0, 200)}`);
   }
 }
 

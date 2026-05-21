@@ -72,6 +72,30 @@ function mapStatus(s: string): string {
   return s.toLowerCase();
 }
 
+/** Format any node output for display in the history panel */
+function formatNodeOutput(output: unknown): string {
+  if (output == null) return "";
+  if (typeof output === "string") {
+    // Truncate long strings (e.g. Gemini response)
+    return output.length > 80 ? output.slice(0, 80) + "…" : output;
+  }
+  if (typeof output === "object") {
+    const obj = output as Record<string, unknown>;
+    // crop-image output: { outputUrl: "..." }
+    if (typeof obj.outputUrl === "string") return `🖼 ${obj.outputUrl.slice(0, 60)}`;
+    // request-inputs output: { text_field: "...", image_field: "..." }
+    const keys = Object.keys(obj);
+    if (keys.length > 0) {
+      const preview = keys.map((k) => {
+        const v = obj[k];
+        return `${k}: ${typeof v === "string" ? v.slice(0, 30) : "…"}`;
+      }).join(", ");
+      return `{${preview}}`.slice(0, 80);
+    }
+  }
+  return String(output).slice(0, 80);
+}
+
 export function HistoryPanel({ workflowId, open, onClose }: Props) {
   const [runs, setRuns] = useState<Run[]>([]);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -246,12 +270,12 @@ export function HistoryPanel({ workflowId, open, onClose }: Props) {
                           </span>
                           <span
                             className="flex-1 text-neutral-500 truncate"
-                            title={nr.error ?? (typeof nr.output === "string" ? nr.output : JSON.stringify(nr.output))}
+                            title={nr.error ?? formatNodeOutput(nr.output)}
                           >
                             {nr.error ? (
                               <span className="text-red-500">{nr.error}</span>
                             ) : (
-                              typeof nr.output === "string" ? nr.output : nr.output ? JSON.stringify(nr.output).slice(0, 60) : ""
+                              <span>{formatNodeOutput(nr.output)}</span>
                             )}
                           </span>
                         </div>
