@@ -129,6 +129,12 @@ export const useCanvas = create<CanvasState>((set, get) => ({
       else if (handleId.startsWith("file") || handleId === "File") stroke = "#8b5cf6";
       else stroke = "#3b82f6"; // text = blue
     }
+    // Determine unique targetHandle for the Response node to support multiple inputs
+    let targetHandle = conn.targetHandle ?? undefined;
+    if (conn.target === "response") {
+      targetHandle = `result_${conn.source}_${conn.sourceHandle ?? "default"}`;
+    }
+
     set({
       edges: [
         ...get().edges,
@@ -137,7 +143,7 @@ export const useCanvas = create<CanvasState>((set, get) => ({
           source: conn.source!,
           sourceHandle: conn.sourceHandle ?? undefined,
           target: conn.target!,
-          targetHandle: conn.targetHandle ?? undefined,
+          targetHandle,
           animated: true,
           style: { stroke, strokeWidth: 2 },
         },

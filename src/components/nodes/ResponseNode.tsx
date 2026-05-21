@@ -1,8 +1,8 @@
 "use client";
 
 import type { NodeProps } from "@xyflow/react";
-import { CheckCircle2, Loader2 } from "lucide-react";
-import { NodeShell, FieldRow } from "./shared";
+import { CheckCircle2, Loader2, MessageSquare } from "lucide-react";
+import { NodeShell, TypedHandle } from "./shared";
 import { useCanvas } from "@/stores/canvas";
 import type { ResponseData } from "@/lib/types";
 import { cn } from "@/lib/cn";
@@ -10,12 +10,88 @@ import { cn } from "@/lib/cn";
 export function ResponseNode({ id, data }: NodeProps) {
   const d = data as unknown as ResponseData;
   const isRunning = useCanvas((s) => s.runningNodeIds.has(id));
+  const edges = useCanvas((s) => s.edges);
+  const nodes = useCanvas((s) => s.nodes);
+
+  // Find all edges targeting this node and get their source node labels and outputs
+  const connectedSources = edges
+    .filter((e) => e.target === id)
+    .map((e) => {
+      const srcNode = nodes.find((n) => n.id === e.source);
+      const srcData = srcNode?.data as Record<string, unknown> | undefined;
+      // Use model label for gemini nodes, or node type otherwise
+      const label =
+        (srcData?.model as string) ||
+        (srcNode?.type === "crop-image" ? "Crop Image" : "") ||
+        (srcNode?.type === "request-inputs" ? "Request Inputs" : "") ||
+        srcNode?.type ||
+        e.source;
+
+      // Extract output value from source node
+      let outputVal: string | undefined = undefined;
+      if (srcNode?.type === "gemini") {
+        outputVal = srcData?.responseText as string | undefined;
+      } else if (srcNode?.type === "crop-image") {
+        outputVal = srcData?.outputImageUrl as string | undefined;
+      } else if (srcNode?.type === "request-inputs") {
+        const fields = (srcData?.fields || []) as Array<{ key: string; value?: string }>;
+        const field = fields.find((f) => f.key === e.sourceHandle);
+        outputVal = field?.value;
+      }
+
+      return {
+        edgeId: e.id,
+        sourceId: e.source,
+        label,
+        targetHandle: e.targetHandle,
+        outputVal,
+      };
+    });
 
   return (
-    <NodeShell id={id} title="Response" closable={false} width={280}>
-      <div className="space-y-2">
-        {/* Input handle row */}
-        <FieldRow label="result" type="any" side="left" handleId="result" />
+    <NodeShell id={id} title="Response" closable={false} width={280} icon={<MessageSquare size={12} className="text-blue-500" />}>
+      <div className="space-y-1.5">
+        {/* Labeled connected input rows */}
+        {connectedSources.map((src, idx) => (
+          <div key={src.edgeId} className="relative flex items-center gap-2 py-1">
+            {/* Handle on left side */}
+            <TypedHandle
+              type="text"
+              side="left"
+              id={src.targetHandle ?? `result_${idx}`}
+              top={28 + idx * 36}
+            />
+            <div className="flex-1 bg-neutral-50 rounded border border-neutral-100 px-2 py-1.5 min-w-0">
+              <div className="flex items-center justify-between gap-2 min-w-0">
+                <span className="text-[11px] font-medium text-neutral-600 truncate flex-1">
+                  {src.label}
+                </span>
+                {src.outputVal ? (
+                  <span className="text-[10px] text-neutral-500 truncate max-w-[120px]" title={src.outputVal}>
+                    {src.outputVal.startsWith("http") ? "🖼️ Image" : src.outputVal}
+                  </span>
+                ) : (
+                  <span className="text-[10px] text-neutral-300 italic shrink-0">
+                    No output yet
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        ))}
+
+        {/* Always show a default input/drop handle at the bottom for dragging new connections */}
+        <div className="relative flex items-center gap-2 py-1">
+          <TypedHandle
+            type="text"
+            side="left"
+            id="result"
+            top={28 + connectedSources.length * 36}
+          />
+          <div className="flex-1 bg-neutral-50/50 rounded border border-dashed border-neutral-200 px-2 py-1.5">
+            <span className="text-[11px] text-neutral-400 italic">Connect new input...</span>
+          </div>
+        </div>
 
         {/* Result output area */}
         <div
@@ -39,10 +115,21 @@ export function ResponseNode({ id, data }: NodeProps) {
                 <CheckCircle2 size={12} />
                 <span className="text-[10px] font-semibold uppercase tracking-wide">Output</span>
               </div>
-              <p className="whitespace-pre-wrap leading-relaxed text-neutral-700">{d.result}</p>
+              {d.result.startsWith("http") && (d.result.includes("placehold") || d.result.includes("transloadit") || d.result.includes("cloudinary") || d.result.includes("amazon") || d.result.includes("uppy")) ? (
+                <div className="mt-1">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={d.result}
+                    alt="Response output image"
+                    className="w-full h-32 object-cover rounded-md border border-neutral-200"
+                  />
+                </div>
+              ) : (
+                <p className="whitespace-pre-wrap leading-relaxed text-neutral-700">{d.result}</p>
+              )}
             </div>
           ) : (
-            <span className="italic">No result yet — run the workflow</span>
+            <span className="italic">No output yet</span>
           )}
         </div>
       </div>

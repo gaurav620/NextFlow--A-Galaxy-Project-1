@@ -89,15 +89,21 @@ function CanvasInner({ workflowId, name: initialName, graph }: Props) {
       data: n.data as Record<string, unknown>,
       deletable: n.type !== "request-inputs" && n.type !== "response",
     }));
-    const edgesIn = graph.edges.map((e) => ({
-      id: e.id,
-      source: e.source,
-      sourceHandle: e.sourceHandle,
-      target: e.target,
-      targetHandle: e.targetHandle,
-      animated: true,
-      style: { stroke: edgeColorForHandle(e.sourceHandle), strokeWidth: 2 },
-    })) as FlowEdge[];
+    const edgesIn = graph.edges.map((e) => {
+      let targetHandle = e.targetHandle;
+      if (e.target === "response" && (!targetHandle || targetHandle === "result")) {
+        targetHandle = `result_${e.source}_${e.sourceHandle ?? "default"}`;
+      }
+      return {
+        id: e.id,
+        source: e.source,
+        sourceHandle: e.sourceHandle,
+        target: e.target,
+        targetHandle,
+        animated: true,
+        style: { stroke: edgeColorForHandle(e.sourceHandle), strokeWidth: 2 },
+      };
+    }) as FlowEdge[];
     init({ workflowId, name: initialName, nodes: nodesIn, edges: edgesIn });
   }, [workflowId, initialName, graph, init]);
 

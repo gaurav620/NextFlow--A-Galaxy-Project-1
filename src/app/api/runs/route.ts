@@ -4,14 +4,16 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { WorkflowGraphSchema } from "@/lib/types";
 import { executeWorkflow } from "@/lib/execute";
+import { runEventBus } from "@/lib/event-bus";
+import { after } from "next/server";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 300; // 5 min on Vercel Pro; 10s on Hobby
 
 const Body = z.object({
   workflowId: z.string(),
   scope: z.enum(["full", "partial", "single"]),
   targetNodeIds: z.array(z.string()).optional(),
+  runId: z.string().optional(),
 });
 
 export async function POST(req: Request) {
@@ -24,7 +26,7 @@ export async function POST(req: Request) {
     const parsed = Body.safeParse(body);
     if (!parsed.success)
       return NextResponse.json({ error: "invalid", details: parsed.error.issues }, { status: 400 });
-    const { workflowId, scope, targetNodeIds } = parsed.data;
+    const { workflowId, scope, targetNodeIds, runId } = parsed.data;
 
     const wf = await prisma.workflow.findFirst({ where: { id: workflowId, userId } });
     if (!wf)
@@ -44,6 +46,7 @@ export async function POST(req: Request) {
     // Create run + nodeRuns in DB
     const run = await prisma.run.create({
       data: {
+        id: runId, // Use client-provided runId if present!
         workflowId,
         userId,
         scope,
@@ -60,27 +63,23 @@ export async function POST(req: Request) {
       },
     });
 
-    // IMPORTANT: We await execution BEFORE returning the response.
-    // This keeps the Vercel serverless function alive for the full maxDuration.
-    // The client will receive {runId} only AFTER execution is complete,
-    // but that's fine — the poll loop will see all nodes already done
-    // and update the UI in one pass.
-    //
-    // Alternative: use Vercel Background Functions or Trigger.dev for
-    // workflows that exceed the function timeout.
-    try {
-      await executeWorkflow({
-        runId: run.id,
-        workflowId,
-        graph: graph as Parameters<typeof executeWorkflow>[0]["graph"],
-        scope,
-        targetNodeIds,
-        onEvent: () => {},
-      });
-    } catch (execErr) {
-      console.error("[runs/route] execution error:", execErr);
-      // Even if execution errors, return the runId so client can see partial results
-    }
+    // Run execution in the background using Next.js after()
+    after(async () => {
+      try {
+        await executeWorkflow({
+          runId: run.id,
+          workflowId,
+          graph: graph as Parameters<typeof executeWorkflow>[0]["graph"],
+          scope,
+          targetNodeIds,
+          onEvent: (evt) => {
+            runEventBus.emit(run.id, evt);
+          },
+        });
+      } catch (execErr) {
+        console.error("[runs/route] background execution error:", execErr);
+      }
+    });
 
     return NextResponse.json({ runId: run.id });
   } catch (err) {

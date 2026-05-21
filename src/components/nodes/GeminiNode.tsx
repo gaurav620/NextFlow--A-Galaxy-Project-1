@@ -1,11 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import type { NodeProps } from "@xyflow/react";
-import { ChevronDown, ChevronRight, Sparkles, Loader2 } from "lucide-react";
+import { ChevronDown, ChevronRight, Sparkles, Loader2, Upload, X } from "lucide-react";
 import { useCanvas } from "@/stores/canvas";
-import { NodeShell, FieldRow } from "./shared";
+import { NodeShell, FieldRow, NodeRunButton } from "./shared";
 import type { GeminiData } from "@/lib/types";
+import { createImageUppy } from "@/lib/uppy";
+import Dashboard from "@uppy/dashboard";
+import { cn } from "@/lib/cn";
 
 // Per spec: "Gemini 3.1 Pro" as the label (maps to gemini-1.5-pro API internally)
 const GEMINI_MODELS = [
@@ -21,59 +24,100 @@ export function GeminiNode({ id, data }: NodeProps) {
   const edges = useCanvas((s) => s.edges);
   const isRunning = useCanvas((s) => s.runningNodeIds.has(id));
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [modelMenuOpen, setModelMenuOpen] = useState(false);
+  const [visionUploadOpen, setVisionUploadOpen] = useState(false);
 
   const isConnected = (handle: string) =>
     edges.some((e) => e.target === id && e.targetHandle === handle);
 
+  const imageConnected = isConnected("Image (Vision)");
   const currentModel = d.model || "Gemini 3.1 Pro";
 
   return (
     <NodeShell
       id={id}
-      title={currentModel}
+      title="Gemini"
       icon={<Sparkles size={12} className="text-purple-500" />}
       width={340}
-      badge={
-        <>
-          <select
-            value={currentModel}
-            onChange={(e) => updateNodeData(id, { model: e.target.value } as Partial<GeminiData>)}
-            className="text-[11px] border border-neutral-200 rounded px-1.5 py-0.5 bg-white text-neutral-700 focus:outline-none focus:border-purple-400 cursor-pointer"
-          >
-            {GEMINI_MODELS.map((m) => (
-              <option key={m.value} value={m.value}>{m.label}</option>
-            ))}
-          </select>
-          <span className="inline-flex items-center gap-1 text-[11px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 font-medium">
-            ● Run
-          </span>
-        </>
-      }
+      badge={<NodeRunButton />}
     >
       <div className="space-y-1">
+        {/* Model horizontal pills */}
+        <div className="flex items-center justify-between gap-1 pb-1.5 border-b border-neutral-100 mb-1 px-1">
+          <span className="text-[10px] text-neutral-400 font-semibold uppercase tracking-wider">Model</span>
+          <div className="flex gap-1">
+            {GEMINI_MODELS.map((m) => {
+              const active = currentModel === m.value;
+              return (
+                <button
+                  key={m.value}
+                  onClick={() => updateNodeData(id, { model: m.value } as Partial<GeminiData>)}
+                  className={cn(
+                    "px-1.5 py-0.5 text-[9px] rounded font-medium border transition-all duration-150",
+                    active
+                      ? "bg-purple-50 border-purple-200 text-purple-600 shadow-sm"
+                      : "bg-white border-neutral-200 text-neutral-500 hover:bg-neutral-50 hover:text-neutral-700"
+                  )}
+                >
+                  {m.label.replace("Gemini ", "")}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         <FieldRow label="Prompt" type="text" side="left" handleId="Prompt" connected={isConnected("Prompt")}>
           <textarea
             value={d.prompt}
             onChange={(e) => updateNodeData(id, { prompt: e.target.value } as Partial<GeminiData>)}
-            placeholder="Enter prompt…"
+            placeholder="Enter your prompt…"
             rows={2}
             disabled={isConnected("Prompt")}
             className="w-full text-xs px-2 py-1 border border-neutral-200 rounded resize-none focus:outline-none focus:border-purple-400 disabled:bg-neutral-50 disabled:text-neutral-400 bg-white"
           />
         </FieldRow>
+
         <FieldRow label="System Prompt" type="text" side="left" handleId="System Prompt" connected={isConnected("System Prompt")}>
           <textarea
             value={d.systemPrompt}
             onChange={(e) => updateNodeData(id, { systemPrompt: e.target.value } as Partial<GeminiData>)}
-            placeholder="System prompt…"
+            placeholder="You are a helpful assistant…"
             rows={2}
             disabled={isConnected("System Prompt")}
             className="w-full text-xs px-2 py-1 border border-neutral-200 rounded resize-none focus:outline-none focus:border-purple-400 disabled:bg-neutral-50 disabled:text-neutral-400 bg-white"
           />
         </FieldRow>
-        <FieldRow label="Image (Vision)" type="image" side="left" handleId="Image (Vision)" connected={isConnected("Image (Vision)")}>
-          <span className="text-[11px] text-neutral-400 ml-1 italic">Connect image handle</span>
+
+        {/* Image (Vision) — Upload button or preview when not connected */}
+        <FieldRow label="Image (Vision)" type="image" side="left" handleId="Image (Vision)" connected={imageConnected}>
+          {imageConnected ? (
+            <span className="text-[11px] text-neutral-400 ml-1 italic">Connected ✓</span>
+          ) : d.visionImageUrl ? (
+            <div className="relative group w-20 h-12 rounded border border-neutral-200 overflow-hidden mt-1 ml-1">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={d.visionImageUrl}
+                alt="Vision preview"
+                className="w-full h-full object-cover"
+              />
+              <button
+                onClick={() => updateNodeData(id, { visionImageUrl: undefined } as Partial<GeminiData>)}
+                className="absolute inset-0 bg-red-600/80 text-white opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-150"
+                title="Remove image"
+              >
+                <X size={10} />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setVisionUploadOpen(true)}
+              className="inline-flex items-center gap-1.5 text-[11px] px-2 py-1 border border-neutral-200 rounded hover:bg-neutral-50 transition-colors text-neutral-600 ml-1"
+            >
+              <Upload size={10} /> Upload Image
+            </button>
+          )}
         </FieldRow>
+
         <FieldRow label="Video" type="video" side="left" handleId="Video" connected={isConnected("Video")}>
           <span className="text-[11px] text-neutral-400 ml-1 italic">Connect video</span>
         </FieldRow>
@@ -102,10 +146,7 @@ export function GeminiNode({ id, data }: NodeProps) {
                 </span>
               </label>
               <input
-                type="range"
-                min={0}
-                max={2}
-                step={0.1}
+                type="range" min={0} max={2} step={0.1}
                 value={(d as unknown as Record<string, unknown>).temperature as number ?? 0.7}
                 onChange={(e) => updateNodeData(id, { temperature: parseFloat(e.target.value) } as Partial<GeminiData>)}
                 className="w-full accent-purple-600"
@@ -119,10 +160,7 @@ export function GeminiNode({ id, data }: NodeProps) {
                 </span>
               </label>
               <input
-                type="range"
-                min={256}
-                max={8192}
-                step={256}
+                type="range" min={256} max={8192} step={256}
                 value={(d as unknown as Record<string, unknown>).maxTokens as number ?? 2048}
                 onChange={(e) => updateNodeData(id, { maxTokens: parseInt(e.target.value) } as Partial<GeminiData>)}
                 className="w-full accent-purple-600"
@@ -145,11 +183,72 @@ export function GeminiNode({ id, data }: NodeProps) {
             </div>
           ) : (
             <div className="mt-2 h-10 rounded border border-dashed border-neutral-200 flex items-center justify-center">
-              <span className="text-[10px] text-neutral-300 italic">Response will appear here</span>
+              <span className="text-[10px] text-neutral-300 italic">No output yet</span>
             </div>
           )}
         </div>
       </div>
+
+      {/* Vision Image Upload Modal */}
+      {visionUploadOpen && (
+        <VisionUploadModal
+          onClose={() => setVisionUploadOpen(false)}
+          onUpload={(url) => {
+            updateNodeData(id, { visionImageUrl: url } as Partial<GeminiData>);
+            setVisionUploadOpen(false);
+          }}
+        />
+      )}
     </NodeShell>
+  );
+}
+
+function VisionUploadModal({
+  onClose,
+  onUpload,
+}: {
+  onClose: () => void;
+  onUpload: (url: string) => void;
+}) {
+  const dashboardRef = useRef<HTMLDivElement>(null);
+  const uppyRef = useRef<ReturnType<typeof createImageUppy> | null>(null);
+
+  useEffect(() => {
+    const uppy = createImageUppy({
+      onComplete: (url) => onUpload(url),
+      onError: (msg) => console.error("Vision upload error:", msg),
+    });
+    uppyRef.current = uppy;
+    return () => { uppy.clear(); uppy.destroy(); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (!dashboardRef.current || !uppyRef.current) return;
+    const uppy = uppyRef.current;
+    const existing = uppy.getPlugin("Dashboard");
+    if (existing) uppy.removePlugin(existing);
+    uppy.use(Dashboard, {
+      target: dashboardRef.current,
+      inline: true,
+      width: "100%",
+      height: 260,
+      hideUploadButton: false,
+      proudlyDisplayPoweredByUppy: false,
+      note: "Images only (max 10MB)",
+    });
+    return () => { const p = uppy.getPlugin("Dashboard"); if (p) uppy.removePlugin(p); };
+  }, []);
+
+  return (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={onClose}>
+      <div className="bg-white rounded-xl shadow-2xl w-[480px] max-w-[90vw] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-200">
+          <h3 className="text-sm font-semibold">Upload Vision Image</h3>
+          <button onClick={onClose} className="p-1 rounded hover:bg-neutral-100"><X size={14} /></button>
+        </div>
+        <div ref={dashboardRef} className="uppy-dashboard-container" />
+      </div>
+    </div>
   );
 }

@@ -39,6 +39,7 @@ export interface GeminiData {
   prompt: string;
   systemPrompt: string;
   images: string[];
+  visionImageUrl?: string;
   responseText?: string;
   connectedInputs?: Record<string, boolean>;
 }

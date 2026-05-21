@@ -127,7 +127,7 @@ async function executeGemini(node: ExecNode, results: Record<string, unknown>) {
     : data.systemPrompt ?? "";
   const imageUrl = imageInput
     ? inputImageUrl(getInputValue(results, imageInput))
-    : "";
+    : (data as { visionImageUrl?: string }).visionImageUrl || "";
 
   const modelId = resolveModelId(data.model);
   console.log(`[execute] Gemini node=${node.id} model=${modelId} prompt="${prompt.slice(0, 80)}"`);
@@ -306,22 +306,34 @@ export async function executeWorkflow(opts: RunOptions) {
               : await executeCropImage(node, results);
             break;
           case "response": {
-            // Read from the 'result' handle's connected source first
-            const resultInput = node.inputs["result"];
-            if (resultInput) {
-              const sourceOutput = results[resultInput.source];
-              // If source output is an object (e.g. request-inputs returns Record), stringify it
-              if (typeof sourceOutput === "object" && sourceOutput !== null) {
-                output = JSON.stringify(sourceOutput, null, 2);
-              } else {
-                output = sourceOutput;
-              }
-            } else {
+            const inputKeys = Object.keys(node.inputs);
+            if (inputKeys.length === 0) {
               // Fallback: take the last parent's output
               output = node.parents
                 .map((p) => results[p])
                 .filter((v) => v !== undefined)
-                .pop();
+                .pop() ?? "";
+            } else if (inputKeys.length === 1) {
+              const inputSpec = node.inputs[inputKeys[0]];
+              const val = getInputValue(results, inputSpec);
+              output = typeof val === "object" && val !== null ? JSON.stringify(val, null, 2) : String(val ?? "");
+            } else {
+              // Multiple inputs — combine them with labels
+              const parts = inputKeys.map((key) => {
+                const inputSpec = node.inputs[key];
+                const val = getInputValue(results, inputSpec);
+                const srcNode = graph.nodes.find((n) => n.id === inputSpec.source);
+                const srcData = srcNode?.data as Record<string, unknown> | undefined;
+                const label =
+                  (srcData?.model as string) ||
+                  (srcNode?.type === "crop-image" ? "Crop Image" : "") ||
+                  (srcNode?.type === "request-inputs" ? "Request Inputs" : "") ||
+                  srcNode?.type ||
+                  inputSpec.source;
+                const valStr = typeof val === "object" && val !== null ? JSON.stringify(val) : String(val ?? "");
+                return `${label}: ${valStr}`;
+              });
+              output = parts.join("\n\n");
             }
             break;
           }

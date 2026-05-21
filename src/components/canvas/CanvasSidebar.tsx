@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/cn";
+import { UserButton, useUser } from "@clerk/nextjs";
 
 interface Props {
   collapsed: boolean;
@@ -21,15 +22,16 @@ interface Props {
 }
 
 const NAV_ITEMS = [
-  { icon: Home, label: "Dashboard", href: "/dashboard" },
-  { icon: Network, label: "Workflows", href: "/dashboard" },
-  { icon: GitBranch, label: "Runs", href: "#" },
+  { icon: Home, label: "Tasks", href: "/dashboard" },
+  { icon: Network, label: "Projects", href: "/dashboard" },
+  { icon: LayoutGrid, label: "Library", href: "#" },
+  { icon: GitBranch, label: "Flow", href: "#" },
   { icon: Cpu, label: "Nodes", href: "#" },
-  { icon: LayoutGrid, label: "Templates", href: "#" },
 ];
 
 export function CanvasSidebar({ collapsed, onToggle }: Props) {
   const [searchOpen, setSearchOpen] = useState(false);
+  const { user } = useUser();
 
   return (
     <aside
@@ -95,8 +97,8 @@ export function CanvasSidebar({ collapsed, onToggle }: Props) {
         ))}
       </nav>
 
-      {/* Bottom: Settings */}
-      <div className="px-1.5 py-2 border-t border-neutral-100">
+      {/* Bottom: Settings & Profile */}
+      <div className="px-1.5 py-2 border-t border-neutral-100 space-y-1.5">
         <button
           title={collapsed ? "Settings" : undefined}
           className={cn(
@@ -107,6 +109,25 @@ export function CanvasSidebar({ collapsed, onToggle }: Props) {
           <Settings size={14} className="shrink-0" />
           {!collapsed && <span>Settings</span>}
         </button>
+
+        <div className={cn(
+          "flex items-center gap-2 px-2 py-1.5 rounded-md border border-neutral-100 bg-neutral-50/50",
+          collapsed && "justify-center px-0 bg-transparent border-0"
+        )}>
+          <div className="shrink-0 flex items-center justify-center">
+            <UserButton />
+          </div>
+          {!collapsed && user && (
+            <div className="min-w-0 flex-1 leading-none">
+              <p className="text-[10px] font-semibold text-neutral-700 truncate">
+                {user.fullName || user.username || "User"}
+              </p>
+              <p className="text-[8px] text-neutral-400 truncate mt-0.5">
+                {user.primaryEmailAddress?.emailAddress || ""}
+              </p>
+            </div>
+          )}
+        </div>
       </div>
     </aside>
   );

@@ -50,57 +50,103 @@ export function useRun(workflowId: string) {
       if (isRunning) return;
       if (!workflowId) return;
 
-      // Build targetNodeIds
       const targetNodeIds: string[] | undefined =
         targetNodeId ? [targetNodeId]
         : scope === "full" ? undefined
         : undefined;
 
-      // Mark all as running immediately
       setIsRunning(true);
 
-      try {
-        const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), 290_000);
+      const clientRunId = `run_${Math.random().toString(36).slice(2, 11)}`;
+      let es: EventSource | null = null;
+      let pollInterval: ReturnType<typeof setInterval> | null = null;
 
-        let res: Response;
-        try {
-          res = await fetch("/api/runs", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              workflowId,
-              scope: targetNodeIds ? "partial" : "full",
-              targetNodeIds,
-            }),
-            signal: controller.signal,
-          });
-          clearTimeout(timer);
-        } catch (fetchErr) {
-          clearTimeout(timer);
-          if (fetchErr instanceof Error && fetchErr.name === "AbortError") {
-            console.warn("[useRun] Request timeout");
-          }
-          return;
+      const cleanup = () => {
+        if (pollInterval) {
+          clearInterval(pollInterval);
+          pollInterval = null;
         }
+        if (es) {
+          es.close();
+          es = null;
+        }
+        setRunningIds([]);
+        setIsRunning(false);
+      };
+
+      const poll = async () => {
+        try {
+          const res = await fetch(`/api/runs/${clientRunId}`);
+          if (!res.ok) return;
+          const data = (await res.json()) as RunData;
+          
+          for (const nr of data.run.nodeRuns) {
+            if (nr.status === "running") {
+              markRunning(nr.nodeId, true);
+            } else if (nr.status === "success") {
+              markRunning(nr.nodeId, false);
+              applyNodeResult(nr.nodeId, nr.nodeType, nr.output);
+            } else if (nr.status === "error") {
+              markRunning(nr.nodeId, false);
+            }
+          }
+
+          if (data.run.status !== "running") {
+            cleanup();
+          }
+        } catch (err) {
+          console.warn("[useRun] polling error:", err);
+        }
+      };
+
+      try {
+        // 1. Subscribe to SSE stream
+        es = new EventSource(`/api/runs/${clientRunId}/stream`);
+        es.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            if (data.type === "node-start" && data.nodeId) {
+              markRunning(data.nodeId, true);
+            } else if (data.type === "node-finish" && data.nodeId) {
+              markRunning(data.nodeId, false);
+              applyNodeResult(data.nodeId, data.nodeType, data.output);
+            } else if (data.type === "node-error" && data.nodeId) {
+              markRunning(data.nodeId, false);
+            } else if (data.type === "run-finish") {
+              cleanup();
+            }
+          } catch (err) {
+            console.error("[useRun] stream parse error:", err);
+          }
+        };
+
+        // 2. Start polling
+        pollInterval = setInterval(poll, 1500);
+
+        // 3. Trigger POST to start execution in background
+        const res = await fetch("/api/runs", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            workflowId,
+            scope: targetNodeIds ? "partial" : "full",
+            targetNodeIds,
+            runId: clientRunId,
+          }),
+        });
 
         if (!res.ok) {
           const text = await res.text().catch(() => "");
           console.error("[useRun] run start failed:", res.status, text);
+          cleanup();
           return;
         }
 
         const data = (await res.json()) as { runId: string };
-        const runId = data.runId;
-        console.log("[useRun] run done, runId:", runId);
-
-        // Fetch final results and apply to UI
-        await applyFinalResults(runId, markRunning, applyNodeResult);
+        console.log("[useRun] run started in background, runId:", data.runId);
       } catch (err) {
         console.error("[useRun] error:", err);
-      } finally {
-        setRunningIds([]);
-        setIsRunning(false);
+        cleanup();
       }
     },
     [workflowId, isRunning, setIsRunning, setRunningIds, markRunning, applyNodeResult]

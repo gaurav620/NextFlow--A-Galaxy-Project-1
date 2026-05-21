@@ -11,8 +11,14 @@ export async function GET(
   const { userId } = await auth();
   if (!userId) return new Response("unauthorized", { status: 401 });
   const { id } = await params;
-  const run = await prisma.run.findFirst({ where: { id, userId } });
-  if (!run) return new Response("not_found", { status: 404 });
+  
+  // Verify ownership ONLY if the run record already exists.
+  // If the run doesn't exist yet (due to race condition where stream connects
+  // before POST creates the DB row), we still allow the SSE stream.
+  const run = await prisma.run.findFirst({ where: { id } });
+  if (run && run.userId !== userId) {
+    return new Response("unauthorized", { status: 401 });
+  }
 
   const encoder = new TextEncoder();
   const stream = new ReadableStream({

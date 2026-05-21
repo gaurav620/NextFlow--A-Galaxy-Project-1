@@ -38,8 +38,9 @@ export function TypedHandle({
  * Functional "Run" button that appears in each node header.
  * Clicking it dispatches a run request via the canvas store,
  * which Canvas.tsx picks up and calls useRun.run("full").
+ * Exported so custom badge props (e.g. GeminiNode) can use it.
  */
-function NodeRunButton() {
+export function NodeRunButton() {
   const isRunning = useCanvas((s) => s.isRunning);
   const requestRun = useCanvas((s) => s.requestRun);
 
