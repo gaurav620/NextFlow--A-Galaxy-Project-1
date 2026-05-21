@@ -63,9 +63,21 @@ export function useRun(workflowId: string) {
           : "partial");
       const targetNodeIds = scope === "full" ? undefined : selected;
 
+      // Determine which node IDs will run
+      const targetIds = scope === "full"
+        ? currentNodes.map((n) => n.id)
+        : (targetNodeIds ?? []);
+
       setRunning(true);
+
+      // Mark all nodes as running IMMEDIATELY (before POST returns)
+      // This gives instant visual feedback with the pulsating glow
+      targetIds.forEach((id) => markRunning(id, true));
+
+      let runId: string | null = null;
       try {
-        // 1. Start the run
+        // POST /api/runs — this awaits the entire execution on the server
+        // (up to maxDuration=300s on Vercel Pro, 10s on Hobby)
         const res = await fetch("/api/runs", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -78,21 +90,25 @@ export function useRun(workflowId: string) {
           throw new Error(`run failed: ${res.status}`);
         }
 
-        const { runId } = (await res.json()) as { runId: string };
-        console.log("[useRun] run started:", runId);
+        const data = (await res.json()) as { runId: string };
+        runId = data.runId;
+        console.log("[useRun] run completed, runId:", runId);
 
-        // 2. Mark all target nodes as running
-        const targetIds = scope === "full"
-          ? currentNodes.map((n) => n.id)
-          : (targetNodeIds ?? []);
-        targetIds.forEach((id) => markRunning(id, true));
-
-        // 3. Poll for completion
-        await pollForResults(runId, markRunning, applyNodeResult);
+        // Fetch final results and apply to UI
+        await applyRunResults(runId, markRunning, applyNodeResult);
 
       } catch (err) {
         console.error("Run error:", err);
+        // If we have a runId, try to poll for partial results
+        if (runId) {
+          try {
+            await applyRunResults(runId, markRunning, applyNodeResult);
+          } catch {
+            // ignore
+          }
+        }
       } finally {
+        // Clear all running indicators
         setRunningIds([]);
         setRunning(false);
       }
@@ -104,43 +120,59 @@ export function useRun(workflowId: string) {
 }
 
 /**
- * Poll GET /api/runs/[id] until all nodes are done.
- * Emits UI updates as each node completes.
+ * Fetch final run results from DB and apply to UI
  */
-async function pollForResults(
+async function applyRunResults(
+  runId: string,
+  markRunning: (id: string, running: boolean) => void,
+  applyNodeResult: (nodeId: string, output: unknown) => void
+): Promise<void> {
+  try {
+    const res = await fetch(`/api/runs/${runId}`);
+    if (!res.ok) return;
+
+    const data = (await res.json()) as RunData;
+    for (const nr of data.run.nodeRuns) {
+      markRunning(nr.nodeId, false);
+      if (nr.status === "success") {
+        applyNodeResult(nr.nodeId, nr.output);
+      } else if (nr.status === "error") {
+        console.error(`[run] node ${nr.nodeId} error:`, nr.error);
+      }
+    }
+  } catch (err) {
+    console.warn("[applyRunResults] error:", err);
+  }
+}
+
+/**
+ * Poll the DB every 1.5s for run completion.
+ * Used when POST returns early (e.g. Vercel Hobby 10s timeout hit).
+ */
+export async function pollForResults(
   runId: string,
   markRunning: (id: string, running: boolean) => void,
   applyNodeResult: (nodeId: string, output: unknown) => void
 ): Promise<void> {
   const completed = new Set<string>();
   const started = new Set<string>();
-  const MAX_POLLS = 200; // 200 × 1.5s = 5 min
-  const POLL_INTERVAL = 1500;
+  const MAX_POLLS = 200;
 
   for (let i = 0; i < MAX_POLLS; i++) {
-    await new Promise((r) => setTimeout(r, POLL_INTERVAL));
-
+    await new Promise((r) => setTimeout(r, 1500));
     try {
       const res = await fetch(`/api/runs/${runId}`);
-      if (!res.ok) {
-        console.warn("[poll] failed to fetch run status:", res.status);
-        continue;
-      }
+      if (!res.ok) continue;
 
       const data = (await res.json()) as RunData;
       const { nodeRuns, status } = data.run;
 
-      // Process each node run
       for (const nr of nodeRuns) {
-        // Mark as started (pulsating)
         if (!started.has(nr.nodeId) && (nr.status === "running" || nr.status === "success" || nr.status === "error")) {
           started.add(nr.nodeId);
           markRunning(nr.nodeId, true);
         }
-
-        // Mark as completed
         if (completed.has(nr.nodeId)) continue;
-
         if (nr.status === "success") {
           completed.add(nr.nodeId);
           markRunning(nr.nodeId, false);
@@ -148,28 +180,16 @@ async function pollForResults(
         } else if (nr.status === "error") {
           completed.add(nr.nodeId);
           markRunning(nr.nodeId, false);
-          console.error(`[poll] node ${nr.nodeId} failed:`, nr.error);
         }
       }
 
-      // Check if run is done
-      if (status !== "running") {
-        console.log("[useRun] run finished:", status);
-        // Clear any remaining running indicators
-        for (const nr of nodeRuns) {
-          markRunning(nr.nodeId, false);
-        }
-        return;
-      }
-    } catch (err) {
-      console.warn("[poll] error:", err);
+      if (status !== "running") return;
+    } catch {
+      // ignore
     }
   }
-
-  console.warn("[useRun] polling timed out after", MAX_POLLS, "attempts");
 }
 
-/** Safely format any output value as a display string */
 function formatOutput(output: unknown): string {
   if (output == null) return "";
   if (typeof output === "string") return output;

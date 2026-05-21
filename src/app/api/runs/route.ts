@@ -6,7 +6,7 @@ import { WorkflowGraphSchema } from "@/lib/types";
 import { executeWorkflow } from "@/lib/execute";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 300; // Up to 5 min on Vercel Pro
+export const maxDuration = 300; // 5 min on Vercel Pro; 10s on Hobby
 
 const Body = z.object({
   workflowId: z.string(),
@@ -41,7 +41,7 @@ export async function POST(req: Request) {
         : targetNodeIds ?? []
     );
 
-    // Create run record in DB
+    // Create run + nodeRuns in DB
     const run = await prisma.run.create({
       data: {
         workflowId,
@@ -60,23 +60,28 @@ export async function POST(req: Request) {
       },
     });
 
-    // Return runId immediately so the client can start polling
-    // Then execute the workflow — on Vercel this runs within the same serverless invocation.
-    // With maxDuration=300 the function stays alive up to 5 minutes.
-    // The execution writes results directly to DB (nodeRuns), which the client polls.
-    executeWorkflow({
-      runId: run.id,
-      workflowId,
-      graph: graph as Parameters<typeof executeWorkflow>[0]["graph"],
-      scope,
-      targetNodeIds,
-      onEvent: () => {}, // results are persisted in DB by executeWorkflow
-    }).catch((err) => {
-      console.error("[runs/route] execution error:", err);
-    });
+    // IMPORTANT: We await execution BEFORE returning the response.
+    // This keeps the Vercel serverless function alive for the full maxDuration.
+    // The client will receive {runId} only AFTER execution is complete,
+    // but that's fine — the poll loop will see all nodes already done
+    // and update the UI in one pass.
+    //
+    // Alternative: use Vercel Background Functions or Trigger.dev for
+    // workflows that exceed the function timeout.
+    try {
+      await executeWorkflow({
+        runId: run.id,
+        workflowId,
+        graph: graph as Parameters<typeof executeWorkflow>[0]["graph"],
+        scope,
+        targetNodeIds,
+        onEvent: () => {},
+      });
+    } catch (execErr) {
+      console.error("[runs/route] execution error:", execErr);
+      // Even if execution errors, return the runId so client can see partial results
+    }
 
-    // Note: on Vercel, returning here does NOT kill execution —
-    // the function stays alive until all async work settles (up to maxDuration).
     return NextResponse.json({ runId: run.id });
   } catch (err) {
     console.error("[runs/route] unexpected error:", err);
