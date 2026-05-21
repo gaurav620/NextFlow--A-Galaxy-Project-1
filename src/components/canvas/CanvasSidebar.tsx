@@ -1,0 +1,113 @@
+"use client";
+
+import Link from "next/link";
+import {
+  LayoutGrid,
+  Search,
+  ChevronLeft,
+  ChevronRight,
+  Home,
+  Network,
+  GitBranch,
+  Settings,
+  Cpu,
+} from "lucide-react";
+import { useState } from "react";
+import { cn } from "@/lib/cn";
+
+interface Props {
+  collapsed: boolean;
+  onToggle: () => void;
+}
+
+const NAV_ITEMS = [
+  { icon: Home, label: "Dashboard", href: "/dashboard" },
+  { icon: Network, label: "Workflows", href: "/dashboard" },
+  { icon: GitBranch, label: "Runs", href: "#" },
+  { icon: Cpu, label: "Nodes", href: "#" },
+  { icon: LayoutGrid, label: "Templates", href: "#" },
+];
+
+export function CanvasSidebar({ collapsed, onToggle }: Props) {
+  const [searchOpen, setSearchOpen] = useState(false);
+
+  return (
+    <aside
+      className={cn(
+        "relative flex flex-col bg-white border-r border-neutral-200 transition-all duration-200 z-20 shrink-0",
+        collapsed ? "w-12" : "w-52"
+      )}
+    >
+      {/* Logo row */}
+      <div className="h-14 flex items-center px-3 border-b border-neutral-200 gap-2 overflow-hidden">
+        {!collapsed && (
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <div className="w-6 h-6 rounded-md bg-purple-600 flex items-center justify-center shrink-0">
+              <GitBranch size={13} className="text-white" />
+            </div>
+            <span className="font-bold text-sm truncate text-neutral-900">NextFlow</span>
+          </div>
+        )}
+        {collapsed && (
+          <div className="w-6 h-6 mx-auto rounded-md bg-purple-600 flex items-center justify-center">
+            <GitBranch size={13} className="text-white" />
+          </div>
+        )}
+      </div>
+
+      {/* Toggle button (floating on border) */}
+      <button
+        onClick={onToggle}
+        className="absolute -right-3 top-[52px] w-6 h-6 rounded-full border border-neutral-200 bg-white flex items-center justify-center text-neutral-500 hover:bg-neutral-50 shadow-sm z-30 transition-colors"
+        title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+      >
+        {collapsed ? <ChevronRight size={12} /> : <ChevronLeft size={12} />}
+      </button>
+
+      {/* Search */}
+      {!collapsed && (
+        <div className="px-3 py-2 border-b border-neutral-100">
+          <button
+            onClick={() => setSearchOpen(!searchOpen)}
+            className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md bg-neutral-50 hover:bg-neutral-100 text-xs text-neutral-400 transition-colors"
+          >
+            <Search size={12} />
+            <span>Search…</span>
+          </button>
+        </div>
+      )}
+
+      {/* Nav */}
+      <nav className="flex-1 px-1.5 py-2 space-y-0.5 overflow-y-auto">
+        {NAV_ITEMS.map(({ icon: Icon, label, href }) => (
+          <Link
+            key={label}
+            href={href}
+            title={collapsed ? label : undefined}
+            className={cn(
+              "flex items-center gap-2.5 px-2 py-1.5 rounded-md text-xs text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 transition-colors",
+              collapsed && "justify-center px-1.5"
+            )}
+          >
+            <Icon size={14} className="shrink-0" />
+            {!collapsed && <span className="truncate">{label}</span>}
+          </Link>
+        ))}
+      </nav>
+
+      {/* Bottom: Settings */}
+      <div className="px-1.5 py-2 border-t border-neutral-100">
+        <button
+          title={collapsed ? "Settings" : undefined}
+          className={cn(
+            "w-full flex items-center gap-2.5 px-2 py-1.5 rounded-md text-xs text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900 transition-colors",
+            collapsed && "justify-center px-1.5"
+          )}
+        >
+          <Settings size={14} className="shrink-0" />
+          {!collapsed && <span>Settings</span>}
+        </button>
+      </div>
+    </aside>
+  );
+}

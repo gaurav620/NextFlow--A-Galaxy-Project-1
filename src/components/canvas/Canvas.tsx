@@ -21,6 +21,7 @@ import { GeminiNode } from "@/components/nodes/GeminiNode";
 import { ResponseNode } from "@/components/nodes/ResponseNode";
 import { CanvasTopBar } from "@/components/canvas/CanvasTopBar";
 import { CanvasBottomBar } from "@/components/canvas/CanvasBottomBar";
+import { CanvasSidebar } from "@/components/canvas/CanvasSidebar";
 import { HistoryPanel } from "@/components/history/HistoryPanel";
 
 const nodeTypes = {
@@ -66,6 +67,7 @@ function CanvasInner({ workflowId, name: initialName, graph }: Props) {
 
   const [showMinimap, setShowMinimap] = useState(true);
   const [showHistory, setShowHistory] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   useEffect(() => {
     const nodesIn: FlowNode[] = graph.nodes.map((n) => ({
@@ -132,7 +134,6 @@ function CanvasInner({ workflowId, name: initialName, graph }: Props) {
   const rfInstance = useReactFlow();
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      // Don't fire when typing in an input/textarea
       const tag = (e.target as HTMLElement)?.tagName;
       if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
       const meta = e.metaKey || e.ctrlKey;
@@ -140,7 +141,6 @@ function CanvasInner({ workflowId, name: initialName, graph }: Props) {
       else if (meta && ((e.key === "z" && e.shiftKey) || e.key === "y")) { e.preventDefault(); redo(); }
       else if (e.key === "f" || e.key === "F") { e.preventDefault(); rfInstance.fitView({ padding: 0.2 }); }
       else if (e.key === "Backspace" || e.key === "Delete") {
-        // Guard: prevent deleting Request-Inputs and Response nodes
         const selected = nodes.filter((n) => n.selected);
         const guarded = selected.filter(
           (n) => n.type === "request-inputs" || n.type === "response"
@@ -165,7 +165,7 @@ function CanvasInner({ workflowId, name: initialName, graph }: Props) {
     const srcType = handleTypeFor(srcNode.type as NodeKind, c.sourceHandle ?? undefined);
     const tgtType = handleTypeFor(tgtNode.type as NodeKind, c.targetHandle ?? undefined);
     if (srcType !== "any" && tgtType !== "any" && srcType !== tgtType) return false;
-    // DAG cycle check: BFS from target along outgoing; if we reach source, reject.
+    // DAG cycle check
     const adj = new Map<string, string[]>();
     for (const e of edges) {
       if (!adj.has(e.source)) adj.set(e.source, []);
@@ -187,44 +187,70 @@ function CanvasInner({ workflowId, name: initialName, graph }: Props) {
   const memoNodeTypes = useMemo(() => nodeTypes, []);
 
   return (
-    <div className="flex flex-col h-screen w-screen bg-[#fafafa]">
-      <CanvasTopBar workflowId={workflowId} onToggleHistory={() => setShowHistory((v) => !v)} />
-      <div className="relative flex-1">
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          nodeTypes={memoNodeTypes}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          onConnect={onConnect}
-          isValidConnection={isValidConnection}
-          fitView
-          minZoom={0.2}
-          maxZoom={2}
-          deleteKeyCode={["Backspace", "Delete"]}
-          proOptions={{ hideAttribution: true }}
-        >
-          <Background variant={BackgroundVariant.Dots} gap={20} size={1.4} color="#d4d4d8" />
-          <Controls position="bottom-left" showInteractive={false} />
-          {showMinimap && (
-            <MiniMap
-              position="bottom-right"
-              pannable
-              zoomable
-              maskColor="rgba(244,244,245,0.7)"
-              style={{ borderRadius: 10, border: "1px solid #e4e4e7" }}
-            />
-          )}
-        </ReactFlow>
-        <CanvasBottomBar
-          showMinimap={showMinimap}
-          onToggleMinimap={() => setShowMinimap((v) => !v)}
-        />
-        <HistoryPanel
+    // Full screen: flex row (sidebar + main)
+    <div className="flex h-screen w-screen overflow-hidden bg-[#f7f7f8]">
+      {/* Left sidebar */}
+      <CanvasSidebar
+        collapsed={sidebarCollapsed}
+        onToggle={() => setSidebarCollapsed((v) => !v)}
+      />
+
+      {/* Main column: top bar + canvas */}
+      <div className="flex flex-col flex-1 min-w-0">
+        <CanvasTopBar
           workflowId={workflowId}
-          open={showHistory}
-          onClose={() => setShowHistory(false)}
+          onToggleHistory={() => setShowHistory((v) => !v)}
         />
+
+        {/* Canvas area */}
+        <div className="relative flex-1">
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            nodeTypes={memoNodeTypes}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            onConnect={onConnect}
+            isValidConnection={isValidConnection}
+            fitView
+            minZoom={0.1}
+            maxZoom={2.5}
+            deleteKeyCode={["Backspace", "Delete"]}
+            proOptions={{ hideAttribution: true }}
+          >
+            <Background
+              variant={BackgroundVariant.Dots}
+              gap={24}
+              size={1.2}
+              color="#d1d5db"
+            />
+            <Controls
+              position="bottom-left"
+              showInteractive={false}
+              style={{ boxShadow: "none", border: "1px solid #e5e7eb", borderRadius: 8, background: "white" }}
+            />
+            {showMinimap && (
+              <MiniMap
+                position="bottom-right"
+                pannable
+                zoomable
+                maskColor="rgba(244,244,245,0.7)"
+                style={{ borderRadius: 10, border: "1px solid #e4e4e7", marginBottom: 60 }}
+              />
+            )}
+          </ReactFlow>
+
+          <CanvasBottomBar
+            showMinimap={showMinimap}
+            onToggleMinimap={() => setShowMinimap((v) => !v)}
+          />
+
+          <HistoryPanel
+            workflowId={workflowId}
+            open={showHistory}
+            onClose={() => setShowHistory(false)}
+          />
+        </div>
       </div>
     </div>
   );

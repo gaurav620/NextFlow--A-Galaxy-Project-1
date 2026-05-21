@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 :root {
-  --background: #fafafa;
+  --background: #f7f7f8;
   --foreground: #18181b;
   --border: #e4e4e7;
   --muted: #71717a;
@@ -24,35 +24,76 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans), Inter, system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* React Flow dot grid */
-.react-flow__background.galaxy-dots {
-  background-color: #fafafa;
+/* React Flow — clean dot grid like Magica */
+.react-flow__background {
+  background-color: #f7f7f8;
 }
 
-/* Animated dashed flow edges */
+/* Edges */
 .react-flow__edge-path {
   stroke-width: 2;
 }
 
-/* Pulsating glow used on running nodes */
+/* Pulsating glow on running nodes */
 @keyframes nf-pulse {
   0%, 100% { box-shadow: 0 0 0 0 rgba(124, 58, 237, 0.55), 0 0 30px 0 rgba(124, 58, 237, 0.45); }
   50% { box-shadow: 0 0 0 8px rgba(124, 58, 237, 0), 0 0 50px 6px rgba(124, 58, 237, 0.35); }
 }
 .nf-running { animation: nf-pulse 1.4s ease-in-out infinite; }
 
-/* Subtle card */
+/* Node card */
 .nf-card {
   background: white;
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  box-shadow: 0 1px 2px rgba(0,0,0,.04), 0 4px 12px rgba(0,0,0,.04);
+  border: 1px solid #e9e9eb;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.04);
+  transition: box-shadow 0.15s;
+}
+.nf-card:hover {
+  box-shadow: 0 2px 6px rgba(0,0,0,.06), 0 8px 24px rgba(0,0,0,.06);
 }
 
-/* Slide-up animation for node picker */
+/* Slide-up for node picker */
 @keyframes slideUp {
-  from { opacity: 0; transform: translateY(12px) scale(0.97); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
+  from { opacity: 0; transform: translateY(10px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
 }
+
+/* Scale-in for node picker (Magica style) */
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* Slide-in from right for history panel */
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(20px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+/* React Flow controls customization */
+.react-flow__controls {
+  box-shadow: none !important;
+  border: 1px solid #e4e4e7 !important;
+  border-radius: 8px !important;
+  overflow: hidden;
+}
+.react-flow__controls-button {
+  border-bottom: 1px solid #f0f0f0 !important;
+  background: white !important;
+}
+.react-flow__controls-button:hover {
+  background: #f9f9fb !important;
+}
+.react-flow__controls-button:last-child {
+  border-bottom: none !important;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #d4d4d8; border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: #a1a1aa; }

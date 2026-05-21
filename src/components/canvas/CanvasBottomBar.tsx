@@ -6,14 +6,14 @@ import {
   ZoomIn,
   ZoomOut,
   Maximize,
-  LayoutGrid,
   Plus,
   Map as MapIcon,
   Workflow,
+  FileJson2,
 } from "lucide-react";
 import { useReactFlow } from "@xyflow/react";
 import { useState } from "react";
-import { useCanvas, type FlowNode, type FlowEdge } from "@/stores/canvas";
+import { useCanvas, type FlowNode } from "@/stores/canvas";
 import { NodePicker } from "@/components/canvas/NodePicker";
 
 interface Props {
@@ -26,22 +26,12 @@ export function CanvasBottomBar({ showMinimap, onToggleMinimap }: Props) {
   const undo = useCanvas((s) => s.undo);
   const redo = useCanvas((s) => s.redo);
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [zoom, setZoom] = useState(100);
-
-  const recalcZoom = () => {
-    try {
-      setZoom(Math.round(rf.getZoom() * 100));
-    } catch {
-      // ignore
-    }
-  };
 
   const autoLayout = () => {
     const nodes = useCanvas.getState().nodes;
     const edges = useCanvas.getState().edges;
     if (nodes.length === 0) return;
 
-    // Build adjacency + in-degree for BFS layering
     const adj: Record<string, string[]> = {};
     const indeg: Record<string, number> = {};
     nodes.forEach((n) => { adj[n.id] = []; indeg[n.id] = 0; });
@@ -50,7 +40,6 @@ export function CanvasBottomBar({ showMinimap, onToggleMinimap }: Props) {
       indeg[e.target] = (indeg[e.target] ?? 0) + 1;
     });
 
-    // BFS layering
     const layers: string[][] = [];
     let queue = nodes.filter((n) => (indeg[n.id] ?? 0) === 0).map((n) => n.id);
     const visited = new Set<string>();
@@ -66,11 +55,9 @@ export function CanvasBottomBar({ showMinimap, onToggleMinimap }: Props) {
       }
       queue = next;
     }
-    // Add any remaining unvisited nodes
     const remaining = nodes.filter((n) => !visited.has(n.id)).map((n) => n.id);
     if (remaining.length) layers.push(remaining);
 
-    // Position: X based on layer, Y spread within each layer
     const nodeWidth = 320;
     const nodeHeight = 120;
     const gapX = 100;
@@ -96,53 +83,65 @@ export function CanvasBottomBar({ showMinimap, onToggleMinimap }: Props) {
     setTimeout(() => rf.fitView({ padding: 0.2 }), 50);
   };
 
+  const exportJson = () => {
+    const state = useCanvas.getState();
+    const blob = new Blob(
+      [JSON.stringify({ version: 1, name: state.name, nodes: state.nodes, edges: state.edges }, null, 2)],
+      { type: "application/json" }
+    );
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `${state.name || "workflow"}.json`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
+
   return (
     <>
-      <div className="absolute left-1/2 -translate-x-1/2 bottom-4 nf-card px-1.5 py-1.5 flex items-center gap-0.5 z-10">
-        <ToolBtn onClick={undo} title="Undo (⌘Z)"><Undo2 size={15} /></ToolBtn>
-        <ToolBtn onClick={redo} title="Redo (⌘⇧Z)"><Redo2 size={15} /></ToolBtn>
-        <div className="w-px h-5 bg-neutral-200 mx-0.5" />
-        <ToolBtn
-          onClick={() => { rf.zoomOut(); recalcZoom(); }}
-          title="Zoom out"
-        >
-          <ZoomOut size={15} />
+      {/* Bottom center bar — Magica style: minimal floating pill */}
+      <div className="absolute left-1/2 -translate-x-1/2 bottom-5 z-10 flex items-center gap-1 bg-white border border-neutral-200 rounded-xl px-1.5 py-1.5 shadow-sm">
+        {/* Undo / Redo */}
+        <ToolBtn onClick={undo} title="Undo (⌘Z)"><Undo2 size={14} /></ToolBtn>
+        <ToolBtn onClick={redo} title="Redo (⌘⇧Z)"><Redo2 size={14} /></ToolBtn>
+
+        <Separator />
+
+        {/* Zoom */}
+        <ToolBtn onClick={() => rf.zoomOut()} title="Zoom out"><ZoomOut size={14} /></ToolBtn>
+        <ToolBtn onClick={() => rf.fitView({ padding: 0.2 })} title="Fit view"><Maximize size={14} /></ToolBtn>
+        <ToolBtn onClick={() => rf.zoomIn()} title="Zoom in"><ZoomIn size={14} /></ToolBtn>
+
+        <Separator />
+
+        {/* Auto layout */}
+        <ToolBtn onClick={autoLayout} title="Auto layout"><Workflow size={14} /></ToolBtn>
+
+        <Separator />
+
+        {/* Export JSON */}
+        <ToolBtn onClick={exportJson} title="Export JSON">
+          <FileJson2 size={14} />
         </ToolBtn>
-        <span className="text-xs text-neutral-600 px-1.5 w-10 text-center">{zoom}%</span>
-        <ToolBtn
-          onClick={() => { rf.zoomIn(); recalcZoom(); }}
-          title="Zoom in"
-        >
-          <ZoomIn size={15} />
-        </ToolBtn>
-        <ToolBtn
-          onClick={() => { rf.fitView({ padding: 0.2 }); recalcZoom(); }}
-          title="Fit view"
-        >
-          <Maximize size={15} />
-        </ToolBtn>
-        <ToolBtn onClick={onToggleMinimap} title="Toggle minimap" active={showMinimap}>
-          <LayoutGrid size={15} />
-        </ToolBtn>
-        <ToolBtn onClick={autoLayout} title="Auto layout">
-          <Workflow size={15} />
-        </ToolBtn>
-        <div className="w-px h-5 bg-neutral-200 mx-0.5" />
+
+        {/* + Add node — filled button */}
         <button
           onClick={() => setPickerOpen(true)}
-          className="ml-0.5 inline-flex items-center justify-center w-8 h-8 rounded-md bg-neutral-900 text-white hover:bg-neutral-800"
+          className="ml-0.5 w-8 h-8 rounded-lg bg-neutral-900 text-white flex items-center justify-center hover:bg-neutral-800 transition-colors"
           title="Add node"
         >
-          <Plus size={16} />
+          <Plus size={15} />
         </button>
       </div>
 
+      {/* Bottom right: minimap toggle */}
       <button
         onClick={onToggleMinimap}
-        className="absolute right-4 bottom-4 z-10 p-2 rounded-md bg-white border border-neutral-200 hover:bg-neutral-50"
-        title="Minimap"
+        className={`absolute right-4 bottom-5 z-10 p-2 rounded-lg border border-neutral-200 transition-colors ${
+          showMinimap ? "bg-neutral-900 text-white border-neutral-900" : "bg-white hover:bg-neutral-50 text-neutral-500"
+        }`}
+        title="Toggle minimap"
       >
-        <MapIcon size={15} />
+        <MapIcon size={14} />
       </button>
 
       <NodePicker open={pickerOpen} onClose={() => setPickerOpen(false)} />
@@ -153,21 +152,23 @@ export function CanvasBottomBar({ showMinimap, onToggleMinimap }: Props) {
 function ToolBtn({
   onClick,
   title,
-  active,
   children,
 }: {
   onClick: () => void;
   title: string;
-  active?: boolean;
   children: React.ReactNode;
 }) {
   return (
     <button
       onClick={onClick}
       title={title}
-      className={`p-1.5 rounded-md hover:bg-neutral-100 ${active ? "bg-neutral-100" : ""}`}
+      className="w-8 h-8 flex items-center justify-center rounded-md text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900 transition-colors"
     >
       {children}
     </button>
   );
+}
+
+function Separator() {
+  return <div className="w-px h-5 bg-neutral-100 mx-0.5" />;
 }

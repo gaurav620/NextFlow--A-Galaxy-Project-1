@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { ArrowLeft, Play, History, Download, Upload, Loader2 } from "lucide-react";
+import { ArrowLeft, Play, Clock, Download, Upload, Loader2, Timer, Coins } from "lucide-react";
 import { useCanvas, type FlowNode, type FlowEdge } from "@/stores/canvas";
 import { useRun } from "@/lib/use-run";
 
@@ -20,18 +20,7 @@ export function CanvasTopBar({ workflowId, onToggleHistory }: Props) {
   const exportJson = () => {
     const state = useCanvas.getState();
     const blob = new Blob(
-      [
-        JSON.stringify(
-          {
-            version: 1,
-            name: state.name,
-            nodes: state.nodes,
-            edges: state.edges,
-          },
-          null,
-          2
-        ),
-      ],
+      [JSON.stringify({ version: 1, name: state.name, nodes: state.nodes, edges: state.edges }, null, 2)],
       { type: "application/json" }
     );
     const a = document.createElement("a");
@@ -51,7 +40,6 @@ export function CanvasTopBar({ workflowId, onToggleHistory }: Props) {
       try {
         const text = await file.text();
         const raw = JSON.parse(text);
-        // Zod validation
         const { WorkflowGraphSchema } = await import("@/lib/types");
         const result = WorkflowGraphSchema.safeParse(raw);
         if (!result.success) {
@@ -69,14 +57,15 @@ export function CanvasTopBar({ workflowId, onToggleHistory }: Props) {
   };
 
   return (
-    <header className="h-14 px-4 flex items-center justify-between border-b border-neutral-200 bg-white">
-      <div className="flex items-center gap-3">
+    <header className="h-14 px-4 flex items-center justify-between border-b border-neutral-200 bg-white shrink-0">
+      {/* Left: back + name */}
+      <div className="flex items-center gap-2 min-w-0">
         <Link
           href="/dashboard"
-          className="p-1.5 rounded-md hover:bg-neutral-100"
+          className="p-1.5 rounded-md hover:bg-neutral-100 text-neutral-500 hover:text-neutral-900 transition-colors shrink-0"
           title="Back to workflows"
         >
-          <ArrowLeft size={16} />
+          <ArrowLeft size={15} />
         </Link>
         {editing ? (
           <input
@@ -87,54 +76,73 @@ export function CanvasTopBar({ workflowId, onToggleHistory }: Props) {
             onKeyDown={(e) => {
               if (e.key === "Enter" || e.key === "Escape") setEditing(false);
             }}
-            className="text-sm font-medium px-2 py-1 border border-neutral-300 rounded-md focus:outline-none focus:border-purple-500"
+            className="text-sm font-semibold px-2 py-1 border border-purple-400 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-300 bg-white max-w-48"
           />
         ) : (
           <button
             onClick={() => setEditing(true)}
-            className="text-sm font-medium px-2 py-1 rounded-md hover:bg-neutral-100"
+            className="text-sm font-semibold px-2 py-1 rounded-md hover:bg-neutral-100 text-neutral-900 truncate max-w-48"
+            title="Click to rename"
           >
             {name}
           </button>
         )}
       </div>
+
+      {/* Right: pills + actions + run */}
       <div className="flex items-center gap-1.5">
-        <div className="hidden md:flex items-center gap-2 mr-2">
-          <span className="text-xs px-2.5 py-1 rounded-md bg-neutral-100 text-neutral-700">
-            Est 0.01 M
-          </span>
-          <span className="text-xs px-2.5 py-1 rounded-md bg-neutral-100 text-neutral-700">
-            Bal 30.33 M
-          </span>
+        {/* Est / Bal pills — Magica style */}
+        <div className="hidden md:flex items-center gap-1.5 mr-1">
+          <div className="flex items-center gap-1 px-2.5 py-1 rounded-md border border-neutral-200 bg-neutral-50 text-xs text-neutral-600">
+            <Timer size={11} className="text-neutral-400" />
+            <span>Est 0.01 M</span>
+          </div>
+          <div className="flex items-center gap-1 px-2.5 py-1 rounded-md border border-neutral-200 bg-neutral-50 text-xs text-neutral-600">
+            <Coins size={11} className="text-neutral-400" />
+            <span>Bal 30.33 M</span>
+          </div>
         </div>
+
+        {/* Import */}
         <button
           onClick={importJson}
-          className="p-2 rounded-md hover:bg-neutral-100"
+          className="p-2 rounded-md text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900 transition-colors"
           title="Import JSON"
         >
           <Upload size={15} />
         </button>
+
+        {/* Export */}
         <button
           onClick={exportJson}
-          className="p-2 rounded-md hover:bg-neutral-100"
+          className="p-2 rounded-md text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900 transition-colors"
           title="Export JSON"
         >
           <Download size={15} />
         </button>
+
+        {/* History */}
         <button
           onClick={onToggleHistory}
-          className="p-2 rounded-md hover:bg-neutral-100"
-          title="History"
+          className="p-2 rounded-md text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900 transition-colors"
+          title="Execution History"
         >
-          <History size={15} />
+          <Clock size={15} />
         </button>
+
+        {/* Run button — Magica style: bigger, purple, icon */}
         <button
           onClick={() => run("full")}
           disabled={running}
-          className="ml-1 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-purple-600 text-white text-sm font-medium hover:bg-purple-700 disabled:opacity-60"
-          title="Run"
+          className="ml-1 inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-purple-600 text-white text-sm font-semibold hover:bg-purple-700 disabled:opacity-60 transition-all shadow-sm hover:shadow-md active:scale-95"
+          title="Run workflow"
         >
-          {running ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} fill="currentColor" />}
+          {running ? (
+            <Loader2 size={14} className="animate-spin" />
+          ) : (
+            <Play size={14} fill="currentColor" />
+          )}
+          {!running && <span className="hidden md:inline">Run</span>}
         </button>
       </div>
     </header>
