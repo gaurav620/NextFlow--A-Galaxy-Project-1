@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { NodeProps } from "@xyflow/react";
-import { ChevronDown, ChevronRight, Sparkles } from "lucide-react";
+import { ChevronDown, ChevronRight, Sparkles, Loader2 } from "lucide-react";
 import { useCanvas } from "@/stores/canvas";
 import { NodeShell, FieldRow } from "./shared";
 import type { GeminiData } from "@/lib/types";
@@ -19,6 +19,7 @@ export function GeminiNode({ id, data }: NodeProps) {
   const d = data as unknown as GeminiData;
   const updateNodeData = useCanvas((s) => s.updateNodeData);
   const edges = useCanvas((s) => s.edges);
+  const isRunning = useCanvas((s) => s.runningNodeIds.has(id));
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   const isConnected = (handle: string) =>
@@ -133,9 +134,18 @@ export function GeminiNode({ id, data }: NodeProps) {
         {/* Output / Response */}
         <div className="mt-2 border-t border-neutral-100 pt-2 relative">
           <FieldRow label="Response" type="text" side="right" handleId="Response" />
-          {d.responseText && (
-            <div className="mt-2 p-2 text-[11px] bg-gradient-to-br from-purple-50 to-white border border-purple-100 rounded max-h-32 overflow-y-auto whitespace-pre-wrap text-neutral-700 leading-relaxed">
+          {isRunning ? (
+            <div className="mt-2 flex items-center gap-2 text-[11px] text-purple-600 bg-purple-50 rounded p-2">
+              <Loader2 size={11} className="animate-spin" />
+              <span className="italic">Thinking…</span>
+            </div>
+          ) : d.responseText ? (
+            <div className="mt-2 p-2 text-[11px] bg-gradient-to-br from-purple-50 to-white border border-purple-100 rounded max-h-32 overflow-y-auto whitespace-pre-wrap text-neutral-700 leading-relaxed" style={{ animation: "fadeIn 0.3s ease-out" }}>
               {d.responseText}
+            </div>
+          ) : (
+            <div className="mt-2 h-10 rounded border border-dashed border-neutral-200 flex items-center justify-center">
+              <span className="text-[10px] text-neutral-300 italic">Response will appear here</span>
             </div>
           )}
         </div>

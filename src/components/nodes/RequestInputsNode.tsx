@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { NodeProps } from "@xyflow/react";
-import { Plus, Trash2, Upload, Type, ImagePlus, X } from "lucide-react";
+import { Plus, Trash2, Upload, Type, ImagePlus, X, FormInput } from "lucide-react";
 import { useCanvas } from "@/stores/canvas";
 import { NodeShell } from "./shared";
 import { TypedHandle } from "./shared";
@@ -34,7 +34,7 @@ export function RequestInputsNode({ id, data }: NodeProps) {
     } as Partial<RequestInputsData>);
 
   return (
-    <NodeShell id={id} title="Request-Inputs" closable={false}>
+    <NodeShell id={id} title="Request Inputs" icon={<FormInput size={12} className="text-blue-500" />} closable={false}>
       <div className="space-y-2">
         {d.fields.map((f, idx) => (
           <FieldEditor

@@ -249,11 +249,26 @@ export async function executeWorkflow(opts: RunOptions) {
               ? await executeCropImageViaTrigger(node, results)
               : await executeCropImage(node, results);
             break;
-          case "response":
-            output = node.parents
-              .map((p) => results[p])
-              .find((v) => v !== undefined);
+          case "response": {
+            // Read from the 'result' handle's connected source first
+            const resultInput = node.inputs["result"];
+            if (resultInput) {
+              const sourceOutput = results[resultInput.source];
+              // If source output is an object (e.g. request-inputs returns Record), stringify it
+              if (typeof sourceOutput === "object" && sourceOutput !== null) {
+                output = JSON.stringify(sourceOutput, null, 2);
+              } else {
+                output = sourceOutput;
+              }
+            } else {
+              // Fallback: take the last parent's output
+              output = node.parents
+                .map((p) => results[p])
+                .filter((v) => v !== undefined)
+                .pop();
+            }
             break;
+          }
           default:
             output = null;
         }

@@ -213,10 +213,13 @@ function CanvasInner({ workflowId, name: initialName, graph }: Props) {
             onConnect={onConnect}
             isValidConnection={isValidConnection}
             fitView
+            fitViewOptions={{ padding: 0.2 }}
             minZoom={0.1}
             maxZoom={2.5}
             deleteKeyCode={["Backspace", "Delete"]}
             proOptions={{ hideAttribution: true }}
+            defaultEdgeOptions={{ animated: true, style: { strokeWidth: 2 } }}
+            connectionLineStyle={{ stroke: "#7c3aed", strokeWidth: 2, strokeDasharray: "5 5" }}
           >
             <Background
               variant={BackgroundVariant.Dots}

@@ -11,6 +11,7 @@ interface NodeRunData {
   status: string;
   output: unknown;
   error: string | null;
+  durationMs?: number | null;
 }
 
 interface RunData {
@@ -78,15 +79,45 @@ export function useRun(workflowId: string) {
       try {
         // POST /api/runs — this awaits the entire execution on the server
         // (up to maxDuration=300s on Vercel Pro, 10s on Hobby)
-        const res = await fetch("/api/runs", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ workflowId, scope, targetNodeIds }),
-        });
+        // We use AbortController with a generous client-side timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 290_000); // 290s client timeout
+
+        let res: Response;
+        try {
+          res = await fetch("/api/runs", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ workflowId, scope, targetNodeIds }),
+            signal: controller.signal,
+          });
+          clearTimeout(timeoutId);
+        } catch (fetchErr) {
+          clearTimeout(timeoutId);
+          const isTimeout = fetchErr instanceof Error && fetchErr.name === "AbortError";
+          if (isTimeout) {
+            // Vercel Hobby 10s timeout hit — execution may still be running in the background
+            // Fall through to polling with the runId we may have gotten
+            console.warn("[useRun] fetch timeout — will poll for results if we have a runId");
+          } else {
+            throw fetchErr;
+          }
+          // We cannot recover runId from a timeout, mark all as done
+          setRunningIds([]);
+          setRunning(false);
+          return;
+        }
 
         if (!res.ok) {
           const text = await res.text();
           console.error("Run start failed:", res.status, text);
+
+          // Check if it's a timeout response from Vercel (504/524)
+          if (res.status === 504 || res.status === 524) {
+            // Execution may still be running — we need to poll
+            // But we don't have runId yet. Graceful degradation.
+            console.warn("[useRun] Gateway timeout from Vercel — execution may have completed");
+          }
           throw new Error(`run failed: ${res.status}`);
         }
 

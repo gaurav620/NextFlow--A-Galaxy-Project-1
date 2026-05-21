@@ -11,7 +11,7 @@ import {
   Workflow,
   FileJson2,
 } from "lucide-react";
-import { useReactFlow } from "@xyflow/react";
+import { useReactFlow, useViewport } from "@xyflow/react";
 import { useState } from "react";
 import { useCanvas, type FlowNode } from "@/stores/canvas";
 import { NodePicker } from "@/components/canvas/NodePicker";
@@ -26,6 +26,7 @@ export function CanvasBottomBar({ showMinimap, onToggleMinimap }: Props) {
   const undo = useCanvas((s) => s.undo);
   const redo = useCanvas((s) => s.redo);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const { zoom } = useViewport();
 
   const autoLayout = () => {
     const nodes = useCanvas.getState().nodes;
@@ -108,6 +109,13 @@ export function CanvasBottomBar({ showMinimap, onToggleMinimap }: Props) {
 
         {/* Zoom */}
         <ToolBtn onClick={() => rf.zoomOut()} title="Zoom out"><ZoomOut size={14} /></ToolBtn>
+        <button
+          onClick={() => rf.zoomTo(1)}
+          title="Reset zoom (click)"
+          className="px-2 h-8 text-[11px] tabular-nums text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900 rounded-md transition-colors font-medium min-w-[44px]"
+        >
+          {Math.round(zoom * 100)}%
+        </button>
         <ToolBtn onClick={() => rf.fitView({ padding: 0.2 })} title="Fit view"><Maximize size={14} /></ToolBtn>
         <ToolBtn onClick={() => rf.zoomIn()} title="Zoom in"><ZoomIn size={14} /></ToolBtn>
 

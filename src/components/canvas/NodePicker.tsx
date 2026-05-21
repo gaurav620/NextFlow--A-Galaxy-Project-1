@@ -253,7 +253,27 @@ export function NodePicker({ open, onClose }: Props) {
           </button>
         </div>
 
-        {/* Body: category list */}
+        {/* Category tabs */}
+        {!query && (
+          <div className="flex gap-0.5 px-2 py-1.5 border-b border-neutral-100 overflow-x-auto">
+            {CATEGORIES.map((cat) => (
+              <button
+                key={cat.id}
+                onClick={() => setCategory(cat.id)}
+                className={cn(
+                  "shrink-0 px-2.5 py-1 text-[11px] rounded-md font-medium transition-colors",
+                  category === cat.id
+                    ? "bg-neutral-900 text-white"
+                    : "text-neutral-500 hover:bg-neutral-100 hover:text-neutral-800"
+                )}
+              >
+                {cat.id}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Body: node list */}
         <div className="max-h-80 overflow-y-auto">
           {Object.entries(grouped).length === 0 ? (
             <div className="py-8 text-sm text-neutral-400 text-center">

@@ -78,22 +78,32 @@ export default async function Dashboard() {
         </div>
 
         {workflows.length === 0 ? (
-          <div className="nf-card p-12 text-center">
-            <div className="mx-auto w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500/10 to-amber-400/10 flex items-center justify-center mb-4">
-              <WorkflowIcon size={22} className="text-purple-500" />
+          <div className="nf-card p-16 text-center max-w-md mx-auto">
+            <div className="mx-auto w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-500 to-amber-400 flex items-center justify-center mb-5 shadow-lg shadow-purple-200">
+              <WorkflowIcon size={26} className="text-white" />
             </div>
-            <h2 className="font-semibold">No workflows yet</h2>
-            <p className="text-sm text-neutral-500 mt-1 mb-6">
-              Create your first workflow to get started.
+            <h2 className="text-lg font-semibold text-neutral-900">No workflows yet</h2>
+            <p className="text-sm text-neutral-500 mt-2 mb-8 leading-relaxed">
+              Create a blank workflow or load the 7-node sample to explore the canvas.
             </p>
-            <form action={createWorkflow}>
-              <button
-                type="submit"
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-neutral-900 text-white text-sm font-medium"
-              >
-                <Plus size={16} /> New Workflow
-              </button>
-            </form>
+            <div className="flex flex-col items-center gap-3">
+              <form action={createSampleWorkflow} className="w-full max-w-xs">
+                <button
+                  type="submit"
+                  className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-gradient-to-r from-purple-600 to-purple-500 text-white text-sm font-semibold hover:from-purple-700 hover:to-purple-600 shadow-sm hover:shadow-md transition-all"
+                >
+                  <WorkflowIcon size={15} /> Load Sample Workflow
+                </button>
+              </form>
+              <form action={createWorkflow} className="w-full max-w-xs">
+                <button
+                  type="submit"
+                  className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-white border border-neutral-200 text-sm font-medium hover:bg-neutral-50 text-neutral-700 transition-all"
+                >
+                  <Plus size={15} /> New Blank Workflow
+                </button>
+              </form>
+            </div>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

@@ -27,24 +27,25 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* React Flow — clean dot grid like Magica */
+/* ─── React Flow ─────────────────────────────────────────── */
 .react-flow__background {
   background-color: #f7f7f8;
 }
 
-/* Edges */
 .react-flow__edge-path {
   stroke-width: 2;
 }
 
-/* Pulsating glow on running nodes */
-@keyframes nf-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(124, 58, 237, 0.55), 0 0 30px 0 rgba(124, 58, 237, 0.45); }
-  50% { box-shadow: 0 0 0 8px rgba(124, 58, 237, 0), 0 0 50px 6px rgba(124, 58, 237, 0.35); }
+/* Edge animation (dashes flow along edge) */
+.react-flow__edge.animated .react-flow__edge-path {
+  stroke-dasharray: 5;
+  animation: dashdraw 0.5s linear infinite;
 }
-.nf-running { animation: nf-pulse 1.4s ease-in-out infinite; }
+@keyframes dashdraw {
+  from { stroke-dashoffset: 10; }
+}
 
-/* Node card */
+/* ─── Node card ────────────────────────────────────────────── */
 .nf-card {
   background: white;
   border: 1px solid #e9e9eb;
@@ -56,25 +57,52 @@ body {
   box-shadow: 0 2px 6px rgba(0,0,0,.06), 0 8px 24px rgba(0,0,0,.06);
 }
 
-/* Slide-up for node picker */
+/* Node error state */
+.nf-error {
+  border-color: #fca5a5 !important;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.15) !important;
+}
+
+/* ─── Running / Pulsating glow ──────────────────────────────── */
+@keyframes nf-pulse {
+  0%, 100% {
+    box-shadow:
+      0 0 0 0 rgba(124, 58, 237, 0.55),
+      0 0 30px 0 rgba(124, 58, 237, 0.45);
+  }
+  50% {
+    box-shadow:
+      0 0 0 8px rgba(124, 58, 237, 0),
+      0 0 50px 6px rgba(124, 58, 237, 0.35);
+  }
+}
+.nf-running {
+  animation: nf-pulse 1.4s ease-in-out infinite;
+  border-color: rgba(124, 58, 237, 0.4) !important;
+}
+
+/* ─── Animations ────────────────────────────────────────────── */
 @keyframes slideUp {
   from { opacity: 0; transform: translateY(10px) scale(0.97); }
   to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-/* Scale-in for node picker (Magica style) */
 @keyframes scaleIn {
   from { opacity: 0; transform: scale(0.95); }
   to   { opacity: 1; transform: scale(1); }
 }
 
-/* Slide-in from right for history panel */
 @keyframes slideInRight {
   from { opacity: 0; transform: translateX(20px); }
   to   { opacity: 1; transform: translateX(0); }
 }
 
-/* React Flow controls customization */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ─── React Flow controls ───────────────────────────────────── */
 .react-flow__controls {
   box-shadow: none !important;
   border: 1px solid #e4e4e7 !important;
@@ -92,8 +120,16 @@ body {
   border-bottom: none !important;
 }
 
-/* Scrollbar */
+/* ─── Scrollbar ─────────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #d4d4d8; border-radius: 99px; }
 ::-webkit-scrollbar-thumb:hover { background: #a1a1aa; }
+
+/* ─── Uppy Dashboard overrides ──────────────────────────────── */
+.uppy-Dashboard-inner {
+  border-radius: 8px !important;
+}
+.uppy-Dashboard-AddFiles-title {
+  font-size: 14px !important;
+}
