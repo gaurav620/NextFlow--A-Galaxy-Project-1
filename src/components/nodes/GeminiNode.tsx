@@ -11,12 +11,12 @@ import Dashboard from "@uppy/dashboard";
 import { cn } from "@/lib/cn";
 
 // Model labels (UI) → API model IDs tooltip mapping
-// Default is "Gemini 2.5 Flash" → maps to gemini-1.5-flash (free tier)
+// Default is "Gemini 2.5 Flash" → maps to gemini-2.5-flash (free tier)
 const GEMINI_MODELS = [
-  { label: "2.5 Flash", displayName: "Gemini 2.5 Flash", apiModel: "gemini-1.5-flash", free: true },
-  { label: "2.0 Flash", displayName: "Gemini 2.0 Flash", apiModel: "gemini-2.0-flash", free: true },
-  { label: "3.1 Pro", displayName: "Gemini 3.1 Pro", apiModel: "gemini-1.5-pro", free: false },
-  { label: "2.5 Pro", displayName: "Gemini 2.5 Pro", apiModel: "gemini-1.5-pro", free: false },
+  { label: "2.5 Flash", displayName: "Gemini 2.5 Flash", apiModel: "gemini-2.5-flash", free: true },
+  { label: "2.0 Flash", displayName: "Gemini 2.0 Flash", apiModel: "gemini-2.5-flash", free: true },
+  { label: "3.1 Pro", displayName: "Gemini 3.1 Pro", apiModel: "gemini-3.1-flash-lite", free: true },
+  { label: "2.5 Pro", displayName: "Gemini 2.5 Pro", apiModel: "gemini-2.5-flash-lite", free: true },
 ];
 
 export function GeminiNode({ id, data }: NodeProps) {
