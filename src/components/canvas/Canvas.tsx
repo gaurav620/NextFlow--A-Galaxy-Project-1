@@ -21,6 +21,7 @@ import { GeminiNode } from "@/components/nodes/GeminiNode";
 import { ResponseNode } from "@/components/nodes/ResponseNode";
 import { CanvasTopBar } from "@/components/canvas/CanvasTopBar";
 import { CanvasBottomBar } from "@/components/canvas/CanvasBottomBar";
+import { CanvasSidebar } from "@/components/canvas/CanvasSidebar";
 import { HistoryPanel } from "@/components/history/HistoryPanel";
 import { useRun } from "@/lib/use-run";
 
@@ -70,6 +71,7 @@ function CanvasInner({ workflowId, name: initialName, graph }: Props) {
 
   const [showMinimap, setShowMinimap] = useState(true);
   const [showHistory, setShowHistory] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   // Listen for run requests from individual node Run buttons
   useEffect(() => {
@@ -206,9 +208,15 @@ function CanvasInner({ workflowId, name: initialName, graph }: Props) {
   const memoNodeTypes = useMemo(() => nodeTypes, []);
 
   return (
-    // Full screen: flex row (main + history panel)
+    // Full screen: sidebar + main column + history panel
     <div className="flex h-screen w-screen overflow-hidden bg-background">
-      {/* Main column: top bar + canvas + bottom bar */}
+      {/* ── Left Nav Sidebar ── */}
+      <CanvasSidebar
+        collapsed={sidebarCollapsed}
+        onToggle={() => setSidebarCollapsed((v) => !v)}
+      />
+
+      {/* ── Main column: top bar + canvas + bottom bar ── */}
       <div className="flex flex-col flex-1 min-w-0">
         <CanvasTopBar
           workflowId={workflowId}
