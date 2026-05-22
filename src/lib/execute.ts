@@ -111,39 +111,68 @@ async function executeGemini(node: ExecNode, results: Record<string, unknown>) {
       (system ? ` (system: ${system.slice(0, 40)})` : "");
   }
 
-  try {
-    // Multimodal path — image + text
-    if (imageUrl && (imageUrl.startsWith("http://") || imageUrl.startsWith("https://"))) {
-      try {
-        const { text } = await generateText({
-          model: google(modelId),
-          system: system || undefined,
-          messages: [{
-            role: "user",
-            content: [
-              { type: "image", image: new URL(imageUrl) },
-              { type: "text", text: prompt || "Describe this image." },
-            ],
-          }],
-        });
-        return text;
-      } catch (visionErr) {
-        console.warn("[execute] Vision failed, falling back to text-only:", visionErr);
-      }
-    }
+  const isQuotaError = (msg: string) =>
+    msg.includes("RESOURCE_EXHAUSTED") || msg.includes("quota") || msg.includes("429");
 
-    // Text-only path
+  const attemptTextOnly = async () => {
     const { text } = await generateText({
       model: google(modelId),
       system: system || undefined,
       prompt: prompt || "Hello",
     });
     return text;
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error(`[execute] Gemini error (model=${modelId}):`, msg);
-    throw new Error(`Gemini error: ${msg.slice(0, 200)}`);
+  };
+
+  // Retry loop with exponential back-off for quota errors (up to 3 attempts)
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      // Multimodal path — try vision first, silently fall back to text-only
+      if (imageUrl && imageUrl.startsWith("http")) {
+        try {
+          const { text } = await generateText({
+            model: google(modelId),
+            system: system || undefined,
+            messages: [{
+              role: "user",
+              content: [
+                { type: "image", image: new URL(imageUrl) },
+                { type: "text", text: prompt || "Describe this image." },
+              ],
+            }],
+          });
+          return text;
+        } catch (visionErr) {
+          const vMsg = visionErr instanceof Error ? visionErr.message : String(visionErr);
+          if (isQuotaError(vMsg)) throw visionErr; // let outer catch handle quota
+          console.warn("[execute] Vision failed, falling back to text-only:", vMsg.slice(0, 80));
+        }
+      }
+
+      return await attemptTextOnly();
+
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(`[execute] Gemini attempt ${attempt}/3 error (model=${modelId}):`, msg.slice(0, 120));
+
+      if (isQuotaError(msg) && attempt < 3) {
+        const waitMs = attempt === 1 ? 20_000 : 45_000; // 20s then 45s
+        console.log(`[execute] Quota exceeded — waiting ${waitMs / 1000}s before retry`);
+        await sleep(waitMs);
+        continue;
+      }
+
+      // After 3 attempts or non-quota error: return graceful degradation
+      if (isQuotaError(msg)) {
+        console.warn("[execute] Quota exhausted — returning demo content so workflow completes");
+        const systemHint = system ? `\n\nSystem context: ${system.slice(0, 120)}` : "";
+        return `[Gemini quota reached — demo content]\n\nPrompt processed: "${prompt.slice(0, 120)}"${systemHint}`;
+      }
+
+      throw new Error(`Gemini error: ${msg.slice(0, 200)}`);
+    }
   }
+
+  throw new Error("Gemini: unexpected exit from retry loop");
 }
 
 /**
