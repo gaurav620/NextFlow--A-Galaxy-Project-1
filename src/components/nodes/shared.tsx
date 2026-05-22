@@ -5,7 +5,7 @@ import { useCanvas } from "@/stores/canvas";
 import { HANDLE_COLORS, type HandleType } from "@/lib/types";
 import { cn } from "@/lib/cn";
 import { Play, X, Loader2, Lock } from "lucide-react";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export function TypedHandle({
   type,
@@ -134,8 +134,9 @@ export function NodeShell({
   const onNodesChange = useCanvas((s) => s.onNodesChange);
 
   // Track previous state to fire one-shot flash animations
+  // Must use useState (not useRef) so React re-renders when flash class changes
+  const [flashClass, setFlashClass] = useState<string | null>(null);
   const prevStateRef = useRef(nodeState);
-  const flashRef = useRef<string | null>(null);
   const flashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -143,14 +144,17 @@ export function NodeShell({
     prevStateRef.current = nodeState;
 
     if (prev === "running" && nodeState === "success") {
-      flashRef.current = "nf-success-flash";
+      setFlashClass("nf-success-flash");
       if (flashTimerRef.current) clearTimeout(flashTimerRef.current);
-      flashTimerRef.current = setTimeout(() => { flashRef.current = null; }, 1300);
+      flashTimerRef.current = setTimeout(() => setFlashClass(null), 1400);
     } else if (prev === "running" && nodeState === "failed") {
-      flashRef.current = "nf-fail-flash";
+      setFlashClass("nf-fail-flash");
       if (flashTimerRef.current) clearTimeout(flashTimerRef.current);
-      flashTimerRef.current = setTimeout(() => { flashRef.current = null; }, 1300);
+      flashTimerRef.current = setTimeout(() => setFlashClass(null), 1400);
     }
+    return () => {
+      if (flashTimerRef.current) clearTimeout(flashTimerRef.current);
+    };
   }, [nodeState]);
 
   return (
@@ -159,9 +163,9 @@ export function NodeShell({
         "nf-card relative text-left",
         nodeState === "running" && "nf-running",
         nodeState === "queued" && "nf-queued",
-        nodeState === "success" && !flashRef.current && "nf-success",
-        nodeState === "failed" && !flashRef.current && "nf-error",
-        flashRef.current
+        nodeState === "success" && !flashClass && "nf-success",
+        nodeState === "failed" && !flashClass && "nf-error",
+        flashClass
       )}
       style={{ width }}
     >

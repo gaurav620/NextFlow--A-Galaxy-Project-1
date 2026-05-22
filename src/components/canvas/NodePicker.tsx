@@ -34,7 +34,7 @@ interface Item {
 const ITEMS: Item[] = [
   {
     kind: "gemini",
-    label: "Gemini 3.1 Pro",
+    label: "Gemini 2.5 Flash",
     category: "AI",
     enabled: true,
     Icon: Sparkles,

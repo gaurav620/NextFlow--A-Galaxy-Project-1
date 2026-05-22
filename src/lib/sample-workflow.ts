@@ -54,7 +54,7 @@ export function sampleWorkflowGraph(): WorkflowGraph {
         type: "gemini",
         position: { x: 500, y: 300 },
         data: {
-          model: "Gemini 3.1 Pro",
+          model: "Gemini 2.5 Flash",
           prompt: "",
           systemPrompt:
             "You are a marketing copywriter. Write a one-paragraph product description.",
@@ -74,7 +74,7 @@ export function sampleWorkflowGraph(): WorkflowGraph {
         type: "gemini",
         position: { x: 940, y: 300 },
         data: {
-          model: "Gemini 3.1 Pro",
+          model: "Gemini 2.5 Flash",
           prompt: "",
           systemPrompt:
             "Condense the following product description into a tweet-length hook (under 240 characters).",
@@ -88,7 +88,7 @@ export function sampleWorkflowGraph(): WorkflowGraph {
         type: "gemini",
         position: { x: 1360, y: 300 },
         data: {
-          model: "Gemini 3.1 Pro",
+          model: "Gemini 2.5 Flash",
           prompt: "",
           systemPrompt:
             "You are a social media manager. Combine the tweet hook and the two product crops into a final marketing post.",

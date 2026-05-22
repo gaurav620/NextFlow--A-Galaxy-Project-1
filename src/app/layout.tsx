@@ -22,7 +22,7 @@ export default function RootLayout({
           <link rel="stylesheet" href="/css/uppy-core.css" />
           <link rel="stylesheet" href="/css/uppy-dashboard.css" />
         </head>
-        <body className="min-h-full flex flex-col bg-[#fafafa] text-neutral-900">
+        <body className="min-h-full flex flex-col bg-[#08080a] text-zinc-100">
           <Attribution />
           {children}
         </body>

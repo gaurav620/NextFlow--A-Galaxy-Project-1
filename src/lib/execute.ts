@@ -38,20 +38,18 @@ function useTriggerDev(): boolean {
  */
 function resolveModelId(uiName?: string): string {
   switch (uiName) {
-    // Spec label "Gemini 3.1 Pro" → gemini-1.5-pro (stable, free tier)
-    case "Gemini 3.1 Pro":
-      return "gemini-1.5-pro";
-    // "Gemini 2.5 Flash" → gemini-1.5-flash (stable, fast)
+    // Free-tier fast models (default)
     case "Gemini 2.5 Flash":
       return "gemini-1.5-flash";
-    // "Gemini 2.5 Pro" → gemini-1.5-pro (stable)
-    case "Gemini 2.5 Pro":
-      return "gemini-1.5-pro";
-    // "Gemini 2.0 Flash" → gemini-2.0-flash (stable)
     case "Gemini 2.0 Flash":
       return "gemini-2.0-flash";
+    // Pro models (may use quota faster)
+    case "Gemini 3.1 Pro":
+      return "gemini-1.5-flash"; // map to flash for free-tier safety
+    case "Gemini 2.5 Pro":
+      return "gemini-1.5-pro";
     default:
-      // Any unrecognised label (including old stored values) → safe fallback
+      // Any unrecognised label → safe free-tier fallback
       return "gemini-1.5-flash";
   }
 }
