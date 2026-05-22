@@ -28,16 +28,11 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
  */
 function resolveModelId(uiName?: string): string {
   switch (uiName) {
-    case "Gemini 2.5 Flash":
-      return "gemini-2.5-flash";
-    case "Gemini 2.0 Flash":
-      return "gemini-2.5-flash"; // fallback to working free-tier model to avoid rate/quota limits
-    case "Gemini 3.1 Pro":
-      return "gemini-3.1-flash-lite"; // map to working free-tier model
-    case "Gemini 2.5 Pro":
-      return "gemini-2.5-flash-lite"; // map to working free-tier model
-    default:
-      return "gemini-2.5-flash";
+    case "Gemini 3.1 Pro":   return "gemini-2.5-flash";  // UI label per spec; maps to free-tier
+    case "Gemini 2.5 Flash": return "gemini-2.5-flash";
+    case "Gemini 2.0 Flash": return "gemini-2.0-flash";
+    case "Gemini 2.5 Pro":   return "gemini-2.5-pro";
+    default:                 return "gemini-2.5-flash";
   }
 }
 

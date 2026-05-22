@@ -13,10 +13,10 @@ import { cn } from "@/lib/cn";
 // Model labels (UI) → API model IDs tooltip mapping
 // Default is "Gemini 2.5 Flash" → maps to gemini-2.5-flash (free tier)
 const GEMINI_MODELS = [
+  { label: "3.1 Pro", displayName: "Gemini 3.1 Pro", apiModel: "gemini-2.5-flash", free: true },
   { label: "2.5 Flash", displayName: "Gemini 2.5 Flash", apiModel: "gemini-2.5-flash", free: true },
-  { label: "2.0 Flash", displayName: "Gemini 2.0 Flash", apiModel: "gemini-2.5-flash", free: true },
-  { label: "3.1 Pro", displayName: "Gemini 3.1 Pro", apiModel: "gemini-3.1-flash-lite", free: true },
-  { label: "2.5 Pro", displayName: "Gemini 2.5 Pro", apiModel: "gemini-2.5-flash-lite", free: true },
+  { label: "2.0 Flash", displayName: "Gemini 2.0 Flash", apiModel: "gemini-2.0-flash", free: true },
+  { label: "2.5 Pro", displayName: "Gemini 2.5 Pro", apiModel: "gemini-2.5-pro", free: false },
 ];
 
 export function GeminiNode({ id, data }: NodeProps) {
@@ -31,8 +31,8 @@ export function GeminiNode({ id, data }: NodeProps) {
     edges.some((e) => e.target === id && e.targetHandle === handle);
 
   const imageConnected = isConnected("Image (Vision)");
-  // Default to "Gemini 2.5 Flash" (free tier) if not set
-  const currentModel = d.model || "Gemini 2.5 Flash";
+  // Default to "Gemini 3.1 Pro" per spec
+  const currentModel = d.model || "Gemini 3.1 Pro";
   const currentModelDef = GEMINI_MODELS.find((m) => m.displayName === currentModel) || GEMINI_MODELS[0];
 
   return (
