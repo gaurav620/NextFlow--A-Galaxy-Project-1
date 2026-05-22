@@ -1,11 +1,10 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import Link from "next/link";
-import { Plus, Workflow as WorkflowIcon, Layers } from "lucide-react";
+import { Plus, Workflow as WorkflowIcon } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { createWorkflow, createSampleWorkflow } from "@/app/actions/workflows";
 import { WorkflowRow } from "@/components/dashboard/WorkflowRow";
-import { UserButton } from "@clerk/nextjs";
+import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 
 export const dynamic = "force-dynamic";
 
@@ -30,49 +29,23 @@ export default async function Dashboard() {
   });
 
   return (
-    <div className="flex min-h-screen bg-white">
+    <div className="flex min-h-screen bg-white dark:bg-zinc-950">
       {/* ── Left Sidebar ── */}
-      <aside className="w-56 shrink-0 border-r border-neutral-200 bg-white flex flex-col">
-        {/* Logo */}
-        <div className="px-4 py-4 flex items-center gap-2.5 border-b border-neutral-100">
-          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-purple-600 to-purple-400 shadow-sm flex items-center justify-center">
-            <span className="text-white text-xs font-bold">N</span>
-          </div>
-          <span className="font-bold text-neutral-900 tracking-tight text-sm">NextFlow</span>
-        </div>
-
-        {/* Nav */}
-        <nav className="px-3 py-4 flex-1 space-y-0.5">
-          <Link
-            href="/dashboard"
-            className="flex items-center gap-2.5 px-3 py-2 rounded-lg bg-neutral-100 text-xs font-semibold text-neutral-900"
-          >
-            <Layers size={14} className="text-purple-600" />
-            Workflows
-          </Link>
-        </nav>
-
-        {/* User */}
-        <div className="p-4 border-t border-neutral-100">
-          <div className="flex items-center gap-2">
-            <UserButton />
-          </div>
-        </div>
-      </aside>
+      <DashboardSidebar />
 
       {/* ── Main Content ── */}
       <main className="flex-1 px-8 py-8 max-w-[1200px]">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-neutral-900 tracking-tight">Workflows</h1>
-            <p className="text-sm text-neutral-500 mt-0.5">Build and run LLM workflows visually.</p>
+            <h1 className="text-2xl font-bold text-neutral-900 dark:text-zinc-100 tracking-tight">Workflows</h1>
+            <p className="text-sm text-neutral-500 dark:text-zinc-400 mt-0.5">Build and run LLM workflows visually.</p>
           </div>
           <div className="flex items-center gap-2">
             <form action={createSampleWorkflow}>
               <button
                 type="submit"
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-neutral-200 bg-white text-sm font-medium text-neutral-700 hover:bg-neutral-50 transition-colors"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-neutral-200 dark:border-white/10 bg-white dark:bg-white/5 text-sm font-medium text-neutral-700 dark:text-zinc-300 hover:bg-neutral-50 dark:hover:bg-white/10 transition-colors"
               >
                 <WorkflowIcon size={14} />
                 Load Sample
@@ -92,12 +65,12 @@ export default async function Dashboard() {
 
         {/* Content */}
         {workflows.length === 0 ? (
-          <div className="border border-neutral-200 rounded-xl p-16 text-center max-w-md mx-auto bg-white">
+          <div className="border border-neutral-200 dark:border-white/10 rounded-xl p-16 text-center max-w-md mx-auto bg-white dark:bg-zinc-900/50">
             <div className="mx-auto w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-500 to-purple-400 flex items-center justify-center mb-5">
               <WorkflowIcon size={26} className="text-white" />
             </div>
-            <h2 className="text-lg font-bold text-neutral-900">No workflows yet</h2>
-            <p className="text-sm text-neutral-500 mt-2 mb-8 leading-relaxed">
+            <h2 className="text-lg font-bold text-neutral-900 dark:text-zinc-100">No workflows yet</h2>
+            <p className="text-sm text-neutral-500 dark:text-zinc-400 mt-2 mb-8 leading-relaxed">
               Create a blank workflow or load the sample to explore the canvas.
             </p>
             <div className="flex flex-col items-center gap-3">

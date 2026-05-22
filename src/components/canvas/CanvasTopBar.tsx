@@ -6,6 +6,7 @@ import { ArrowLeft, Play, Clock, Download, Upload, Loader2, Timer, Coins } from 
 import { useCanvas, type FlowNode, type FlowEdge } from "@/stores/canvas";
 import { useRun } from "@/lib/use-run";
 import { UserButton } from "@clerk/nextjs";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 interface Props {
   workflowId: string;
@@ -139,6 +140,9 @@ export function CanvasTopBar({ workflowId, onToggleHistory }: Props) {
         >
           <Clock size={15} />
         </button>
+
+        {/* Theme toggle */}
+        <ThemeToggle />
 
         {/* Run button — Magica style: bigger, purple, icon */}
         <button

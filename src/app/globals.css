@@ -1,15 +1,29 @@
 @import "tailwindcss";
 
+/* Light mode defaults */
 :root {
+  --background: #ffffff;
+  --foreground: #0a0a0a;
+  --border: rgba(0, 0, 0, 0.08);
+  --muted: #737373;
+  --accent: #7c3aed;
+  --accent-amber: #f59e0b;
+  --accent-blue: #3b82f6;
+  color-scheme: light;
+}
+
+/* Dark mode overrides */
+.dark {
   --background: #08080a;
   --foreground: #f4f4f5;
   --border: rgba(255, 255, 255, 0.08);
   --muted: #8e8e9f;
   --accent: #a855f7;
-  --accent-amber: #f59e0b;
-  --accent-blue: #3b82f6;
   color-scheme: dark;
 }
+
+/* Tailwind v4 dark mode via class */
+@variant dark (&:where(.dark, .dark *));
 
 @theme inline {
   --color-background: var(--background);
@@ -24,6 +38,7 @@ html, body {
   height: 100%; 
   background-color: var(--background);
   color: var(--foreground);
+  transition: background-color 0.3s, color 0.3s;
 }
 
 body {

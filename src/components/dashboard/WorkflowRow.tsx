@@ -55,7 +55,7 @@ export function WorkflowRow({ id, name: initialName, updatedAt, runCount, hasAct
     <>
       <Link
         href={`/workflow/${id}`}
-        className="block border border-neutral-200 rounded-xl p-4 bg-white hover:border-neutral-300 hover:shadow-sm transition-all group"
+        className="block border border-neutral-200 dark:border-white/10 rounded-xl p-4 bg-white dark:bg-zinc-900/50 hover:border-neutral-300 dark:hover:border-white/20 hover:shadow-sm dark:hover:shadow-none dark:hover:bg-zinc-900 transition-all group"
         onClick={(e) => { if (editing) e.preventDefault(); }}
       >
         <div className="flex items-start justify-between gap-2">
@@ -70,10 +70,10 @@ export function WorkflowRow({ id, name: initialName, updatedAt, runCount, hasAct
                 if (e.key === "Escape") { setEditName(initialName); setEditing(false); }
               }}
               onClick={(e) => e.preventDefault()}
-              className="font-semibold text-neutral-900 text-sm border border-purple-400 rounded-md px-2 py-0.5 focus:outline-none focus:ring-2 focus:ring-purple-500/30 bg-white w-full max-w-[200px]"
+              className="font-semibold text-neutral-900 dark:text-zinc-100 text-sm border border-purple-400 rounded-md px-2 py-0.5 focus:outline-none focus:ring-2 focus:ring-purple-500/30 bg-white dark:bg-zinc-900 text-sm w-full max-w-[200px]"
             />
           ) : (
-            <h3 className="font-semibold text-neutral-900 text-sm truncate">{initialName}</h3>
+            <h3 className="font-semibold text-neutral-900 dark:text-zinc-100 text-sm truncate">{initialName}</h3>
           )}
           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all shrink-0">
             {/* Rename button */}
@@ -114,7 +114,7 @@ export function WorkflowRow({ id, name: initialName, updatedAt, runCount, hasAct
           </div>
         </div>
         <div className="mt-2 flex items-center justify-between">
-          <p className="text-xs text-neutral-500">{formatRelative(updatedAt)}</p>
+          <p className="text-xs text-neutral-500 dark:text-zinc-400">{formatRelative(updatedAt)}</p>
           <div className="flex items-center gap-2">
             {hasActiveRun && (
               <span className="flex items-center gap-1 text-xs text-emerald-600 font-medium">
@@ -122,7 +122,7 @@ export function WorkflowRow({ id, name: initialName, updatedAt, runCount, hasAct
                 Running
               </span>
             )}
-            <span className="text-xs text-neutral-400">
+            <span className="text-xs text-neutral-400 dark:text-zinc-500">
               {runCount === 0 ? "0 runs" : runCount === 1 ? "1 run" : `${runCount} runs`}
             </span>
           </div>
@@ -136,17 +136,17 @@ export function WorkflowRow({ id, name: initialName, updatedAt, runCount, hasAct
           onClick={() => setConfirmDelete(false)}
         >
           <div
-            className="bg-white border border-neutral-200 rounded-2xl shadow-xl p-6 w-80 max-w-[90vw]"
+            className="bg-white dark:bg-zinc-950 border border-neutral-200 dark:border-white/10 rounded-2xl shadow-xl p-6 w-80 max-w-[90vw]"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="text-sm font-bold text-neutral-900 mb-1">Delete workflow?</h3>
-            <p className="text-xs text-neutral-500 mb-5">
+            <h3 className="text-sm font-bold text-neutral-900 dark:text-zinc-100 mb-1">Delete workflow?</h3>
+            <p className="text-xs text-neutral-500 dark:text-zinc-400 mb-5">
               &ldquo;{initialName}&rdquo; and all its run history will be permanently deleted.
             </p>
             <div className="flex items-center justify-end gap-2">
               <button
                 onClick={() => setConfirmDelete(false)}
-                className="px-3 py-1.5 text-xs font-medium text-neutral-600 border border-neutral-200 rounded-lg hover:bg-neutral-50 transition-colors"
+                className="px-3 py-1.5 text-xs font-medium text-neutral-600 dark:text-zinc-300 border border-neutral-200 dark:border-white/10 rounded-lg hover:bg-neutral-50 dark:hover:bg-white/5 transition-colors"
               >
                 Cancel
               </button>
