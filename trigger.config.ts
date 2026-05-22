@@ -24,4 +24,15 @@ export default defineConfig({
       }),
     ],
   },
+  /**
+   * Inject environment variables into the Trigger.dev cloud runtime.
+   * Without this, Prisma fails with "Environment variable not found: DATABASE_URL"
+   * because tasks run on Trigger.dev's infrastructure, not Vercel.
+   */
+  deploy: {
+    env: {
+      DATABASE_URL: process.env.DATABASE_URL ?? "",
+      GOOGLE_GENERATIVE_AI_API_KEY: process.env.GOOGLE_GENERATIVE_AI_API_KEY ?? "",
+    },
+  },
 });
