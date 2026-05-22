@@ -44,15 +44,15 @@ export function CanvasSidebar({ collapsed, onToggle }: Props) {
       <div className="h-14 flex items-center px-3 border-b border-neutral-200 gap-2 overflow-hidden">
         {!collapsed && (
           <div className="flex items-center gap-2 flex-1 min-w-0">
-            <div className="w-6 h-6 rounded-md bg-purple-600 flex items-center justify-center shrink-0">
-              <GitBranch size={13} className="text-white" />
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-purple-600 to-amber-400 flex items-center justify-center shrink-0 shadow-sm">
+              <span className="text-white text-[10px] font-extrabold leading-none">NF</span>
             </div>
             <span className="font-bold text-sm truncate text-neutral-900">NextFlow</span>
           </div>
         )}
         {collapsed && (
-          <div className="w-6 h-6 mx-auto rounded-md bg-purple-600 flex items-center justify-center">
-            <GitBranch size={13} className="text-white" />
+          <div className="w-7 h-7 mx-auto rounded-lg bg-gradient-to-br from-purple-600 to-amber-400 flex items-center justify-center shadow-sm">
+            <span className="text-white text-[10px] font-extrabold leading-none">NF</span>
           </div>
         )}
       </div>

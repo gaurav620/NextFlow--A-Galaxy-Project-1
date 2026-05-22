@@ -13,7 +13,7 @@ const Payload = z.object({
 
 export const workflowOrchestratorTask = task({
   id: "workflow-orchestrator",
-  maxDuration: 600, // 10 minutes timeout limit for long execution graphs
+  maxDuration: 900, // 15 minutes — CropImage runs in-process with 31s delay per node
   retry: {
     maxAttempts: 1, // Do not auto-retry the entire workflow orchestrator itself to prevent duplicate runs
   },
