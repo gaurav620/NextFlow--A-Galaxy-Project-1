@@ -143,7 +143,7 @@ body {
   backdrop-filter: blur(16px) saturate(120%);
 }
 
-.nf-card:hover {
+.nf-card:not(.nf-running):hover {
   border-color: var(--card-hover-border) !important;
   box-shadow: var(--card-hover-shadow) !important;
   transform: translateY(-1px);
@@ -151,30 +151,33 @@ body {
 
 /* Node state colors */
 .nf-error {
-  border-color: rgba(239,68,68,0.4) !important;
-  box-shadow: 0 0 0 2px rgba(239,68,68,0.1), var(--card-shadow) !important;
+  border-color: rgba(239,68,68,0.5) !important;
+  box-shadow: 0 0 0 3px rgba(239,68,68,0.08), var(--card-shadow) !important;
 }
 
 .nf-queued {
-  border-color: rgba(245,158,11,0.4) !important;
-  box-shadow: 0 0 0 2px rgba(245,158,11,0.1), var(--card-shadow) !important;
+  border-color: rgba(245,158,11,0.5) !important;
+  box-shadow: 0 0 0 3px rgba(245,158,11,0.08), var(--card-shadow) !important;
 }
 
 .nf-success {
-  border-color: rgba(16,185,129,0.4) !important;
-  box-shadow: 0 0 0 2px rgba(16,185,129,0.1), var(--card-shadow) !important;
+  border-color: rgba(16,185,129,0.5) !important;
+  box-shadow: 0 0 0 3px rgba(16,185,129,0.08), var(--card-shadow) !important;
 }
 
-/* ─── Running Node Pulse ───────────────────────────────────── */
-@keyframes nf-pulse {
-  0%, 100% {
-    box-shadow: 0 0 0 1px rgba(124,58,237,0.4), var(--card-shadow);
-    border-color: rgba(124,58,237,0.5) !important;
-  }
-  50% {
-    box-shadow: 0 0 0 4px rgba(124,58,237,0.12), 0 0 30px 4px rgba(124,58,237,0.35);
-    border-color: rgba(124,58,237,0.8) !important;
-  }
+/* ─── Rotating Gradient Border for Running Nodes ──────────── */
+/* Uses CSS @property + conic-gradient background-clip trick   */
+/* Interior is painted with card-bg via padding-box,           */
+/* the rotating gradient shows only at the 2px border ring.   */
+
+@property --nf-angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+
+@keyframes nf-rotate-border {
+  to { --nf-angle: 360deg; }
 }
 
 @keyframes shimmerLine {
@@ -182,20 +185,35 @@ body {
   100% { transform: translateX(280%); }
 }
 
+.nf-running {
+  --nf-angle: 0deg;
+  animation: nf-rotate-border 2s linear infinite !important;
+  border: 2px solid transparent !important;
+  background:
+    linear-gradient(var(--card-bg), var(--card-bg)) padding-box,
+    conic-gradient(
+      from var(--nf-angle),
+      rgba(124,58,237,0)    0%,
+      rgba(124,58,237,0.85) 25%,
+      rgba(192,132,252,1)   50%,
+      rgba(124,58,237,0.85) 75%,
+      rgba(124,58,237,0)    100%
+    ) border-box !important;
+  box-shadow: 0 0 18px rgba(124,58,237,0.18), var(--card-shadow) !important;
+  transform: none !important;
+}
+
+/* Flash animations */
 @keyframes nf-flash-green {
-  0%   { box-shadow: 0 0 0 2px rgba(16,185,129,0.7), 0 0 24px 4px rgba(16,185,129,0.4); border-color: rgba(16,185,129,0.8) !important; }
-  60%  { box-shadow: 0 0 0 4px rgba(16,185,129,0.2), 0 0 40px 6px rgba(16,185,129,0.2); }
-  100% { box-shadow: 0 0 0 2px rgba(16,185,129,0.15), var(--card-shadow); border-color: rgba(16,185,129,0.4) !important; }
+  0%   { box-shadow: 0 0 0 3px rgba(16,185,129,0.6), 0 0 24px rgba(16,185,129,0.35); border-color: rgba(16,185,129,0.8) !important; }
+  60%  { box-shadow: 0 0 0 5px rgba(16,185,129,0.15), 0 0 40px rgba(16,185,129,0.15); }
+  100% { box-shadow: 0 0 0 2px rgba(16,185,129,0.1), var(--card-shadow); border-color: rgba(16,185,129,0.4) !important; }
 }
 
 @keyframes nf-flash-red {
-  0%   { box-shadow: 0 0 0 2px rgba(239,68,68,0.7), 0 0 24px 4px rgba(239,68,68,0.4); border-color: rgba(239,68,68,0.8) !important; }
-  60%  { box-shadow: 0 0 0 4px rgba(239,68,68,0.2), 0 0 40px 6px rgba(239,68,68,0.2); }
-  100% { box-shadow: 0 0 0 2px rgba(239,68,68,0.15), var(--card-shadow); border-color: rgba(239,68,68,0.4) !important; }
-}
-
-.nf-running {
-  animation: nf-pulse 1.6s ease-in-out infinite !important;
+  0%   { box-shadow: 0 0 0 3px rgba(239,68,68,0.6), 0 0 24px rgba(239,68,68,0.35); border-color: rgba(239,68,68,0.8) !important; }
+  60%  { box-shadow: 0 0 0 5px rgba(239,68,68,0.15), 0 0 40px rgba(239,68,68,0.15); }
+  100% { box-shadow: 0 0 0 2px rgba(239,68,68,0.1), var(--card-shadow); border-color: rgba(239,68,68,0.4) !important; }
 }
 
 .nf-success-flash {

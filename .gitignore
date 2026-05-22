@@ -43,3 +43,13 @@ next-env.d.ts
 # Trigger.dev cache
 .trigger/
 .env*.local
+
+# AI assistant config (Claude Code, Cursor, etc.)
+CLAUDE.md
+AGENTS.md
+.cursorrules
+.cursor/
+
+# Local debug scripts
+scripts/test-*.mjs
+scripts/check-*.mjs
