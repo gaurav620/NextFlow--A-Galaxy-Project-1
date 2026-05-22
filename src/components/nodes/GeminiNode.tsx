@@ -10,12 +10,13 @@ import { createImageUppy } from "@/lib/uppy";
 import Dashboard from "@uppy/dashboard";
 import { cn } from "@/lib/cn";
 
-// Per spec: "Gemini 3.1 Pro" as the label (maps to gemini-1.5-pro API internally)
+// Model labels (UI) → API model IDs tooltip mapping
+// Default is "Gemini 2.5 Flash" → maps to gemini-1.5-flash (free tier)
 const GEMINI_MODELS = [
-  { label: "Gemini 3.1 Pro", value: "Gemini 3.1 Pro" },
-  { label: "Gemini 2.5 Flash", value: "Gemini 2.5 Flash" },
-  { label: "Gemini 2.5 Pro", value: "Gemini 2.5 Pro" },
-  { label: "Gemini 2.0 Flash", value: "Gemini 2.0 Flash" },
+  { label: "2.5 Flash", displayName: "Gemini 2.5 Flash", apiModel: "gemini-1.5-flash", free: true },
+  { label: "2.0 Flash", displayName: "Gemini 2.0 Flash", apiModel: "gemini-2.0-flash", free: true },
+  { label: "3.1 Pro", displayName: "Gemini 3.1 Pro", apiModel: "gemini-1.5-pro", free: false },
+  { label: "2.5 Pro", displayName: "Gemini 2.5 Pro", apiModel: "gemini-1.5-pro", free: false },
 ];
 
 export function GeminiNode({ id, data }: NodeProps) {
@@ -30,7 +31,9 @@ export function GeminiNode({ id, data }: NodeProps) {
     edges.some((e) => e.target === id && e.targetHandle === handle);
 
   const imageConnected = isConnected("Image (Vision)");
-  const currentModel = d.model || "Gemini 3.1 Pro";
+  // Default to "Gemini 2.5 Flash" (free tier) if not set
+  const currentModel = d.model || "Gemini 2.5 Flash";
+  const currentModelDef = GEMINI_MODELS.find((m) => m.displayName === currentModel) || GEMINI_MODELS[0];
 
   return (
     <NodeShell
@@ -44,25 +47,34 @@ export function GeminiNode({ id, data }: NodeProps) {
         {/* Model horizontal pills */}
         <div className="flex items-center justify-between gap-1 pb-2 border-b border-white/5 mb-1.5 px-0.5">
           <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">Model</span>
-          <div className="flex gap-1.5">
+          <div className="flex gap-1">
             {GEMINI_MODELS.map((m) => {
-              const active = currentModel === m.value;
+              const active = currentModel === m.displayName;
               return (
                 <button
-                  key={m.value}
-                  onClick={() => updateNodeData(id, { model: m.value } as Partial<GeminiData>)}
+                  key={m.displayName}
+                  onClick={() => updateNodeData(id, { model: m.displayName } as Partial<GeminiData>)}
+                  title={`${m.displayName} (${m.apiModel})${m.free ? " • Free" : ""}`}
                   className={cn(
                     "px-2 py-0.5 text-[9px] rounded-md font-semibold border transition-all duration-150",
                     active
-                      ? "bg-purple-500/10 border-purple-500/30 text-purple-400 shadow-md shadow-purple-500/5"
-                      : "bg-white/5 border-white/5 text-zinc-400 hover:bg-white/10 hover:text-zinc-200"
+                      ? "bg-purple-500/15 border-purple-500/40 text-purple-300 shadow-md shadow-purple-500/10"
+                      : "bg-white/5 border-white/5 text-zinc-500 hover:bg-white/10 hover:text-zinc-300",
+                    m.free && !active && "border-emerald-500/10"
                   )}
                 >
-                  {m.label.replace("Gemini ", "")}
+                  {m.label}
+                  {m.free && (
+                    <span className={cn("ml-0.5", active ? "text-purple-400" : "text-emerald-600")}>●</span>
+                  )}
                 </button>
               );
             })}
           </div>
+        </div>
+        {/* Active model hint */}
+        <div className="text-[9px] text-zinc-600 px-0.5 -mt-1 mb-0.5">
+          API: {currentModelDef.apiModel}{currentModelDef.free ? " · free tier" : ""}
         </div>
 
         <FieldRow label="Prompt" type="text" side="left" handleId="Prompt" connected={isConnected("Prompt")}>

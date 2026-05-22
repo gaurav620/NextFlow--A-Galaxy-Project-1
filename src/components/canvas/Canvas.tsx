@@ -206,61 +206,65 @@ function CanvasInner({ workflowId, name: initialName, graph }: Props) {
   const memoNodeTypes = useMemo(() => nodeTypes, []);
 
   return (
-    // Full screen: flex row (sidebar + main)
+    // Full screen: flex row (main + history panel)
     <div className="flex h-screen w-screen overflow-hidden bg-background">
-      {/* Main column: top bar + canvas */}
+      {/* Main column: top bar + canvas + bottom bar */}
       <div className="flex flex-col flex-1 min-w-0">
         <CanvasTopBar
           workflowId={workflowId}
           onToggleHistory={() => setShowHistory((v) => !v)}
         />
 
-        {/* Canvas area */}
-        <div className="relative flex-1">
-          <ReactFlow
-            nodes={nodes}
-            edges={edges}
-            nodeTypes={memoNodeTypes}
-            onNodesChange={onNodesChange}
-            onEdgesChange={onEdgesChange}
-            onConnect={onConnect}
-            isValidConnection={isValidConnection}
-            fitView
-            fitViewOptions={{ padding: 0.2 }}
-            minZoom={0.1}
-            maxZoom={2.5}
-            deleteKeyCode={["Backspace", "Delete"]}
-            proOptions={{ hideAttribution: true }}
-            defaultEdgeOptions={{ animated: true, style: { strokeWidth: 2 } }}
-            connectionLineStyle={{ stroke: "#a855f7", strokeWidth: 2, strokeDasharray: "5 5" }}
-          >
-            <Background
-              variant={BackgroundVariant.Dots}
-              gap={24}
-              size={1.2}
-              color="#27272a"
-            />
-            <Controls
-              position="bottom-left"
-              showInteractive={false}
-              style={{ border: "none", boxShadow: "none" }}
-            />
-            {showMinimap && (
-              <MiniMap
-                position="bottom-right"
-                pannable
-                zoomable
-                maskColor="rgba(168, 85, 247, 0.08)"
-                style={{ borderRadius: 10, marginBottom: 60 }}
+        {/* Canvas + History panel row */}
+        <div className="flex flex-1 min-h-0">
+          {/* Canvas area */}
+          <div className="relative flex-1 min-w-0">
+            <ReactFlow
+              nodes={nodes}
+              edges={edges}
+              nodeTypes={memoNodeTypes}
+              onNodesChange={onNodesChange}
+              onEdgesChange={onEdgesChange}
+              onConnect={onConnect}
+              isValidConnection={isValidConnection}
+              fitView
+              fitViewOptions={{ padding: 0.2 }}
+              minZoom={0.1}
+              maxZoom={2.5}
+              deleteKeyCode={["Backspace", "Delete"]}
+              proOptions={{ hideAttribution: true }}
+              defaultEdgeOptions={{ animated: true, style: { strokeWidth: 2 } }}
+              connectionLineStyle={{ stroke: "#a855f7", strokeWidth: 2, strokeDasharray: "5 5" }}
+            >
+              <Background
+                variant={BackgroundVariant.Dots}
+                gap={24}
+                size={1.2}
+                color="#27272a"
               />
-            )}
-          </ReactFlow>
+              <Controls
+                position="bottom-left"
+                showInteractive={false}
+                style={{ border: "none", boxShadow: "none" }}
+              />
+              {showMinimap && (
+                <MiniMap
+                  position="bottom-right"
+                  pannable
+                  zoomable
+                  maskColor="rgba(168, 85, 247, 0.08)"
+                  style={{ borderRadius: 10, marginBottom: 60 }}
+                />
+              )}
+            </ReactFlow>
 
-          <CanvasBottomBar
-            showMinimap={showMinimap}
-            onToggleMinimap={() => setShowMinimap((v) => !v)}
-          />
+            <CanvasBottomBar
+              showMinimap={showMinimap}
+              onToggleMinimap={() => setShowMinimap((v) => !v)}
+            />
+          </div>
 
+          {/* History Panel — persistent flex sibling (slides in/out) */}
           <HistoryPanel
             workflowId={workflowId}
             open={showHistory}
@@ -270,6 +274,7 @@ function CanvasInner({ workflowId, name: initialName, graph }: Props) {
       </div>
     </div>
   );
+
 }
 
 export function Canvas(props: Props) {
