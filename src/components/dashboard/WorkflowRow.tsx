@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import { deleteWorkflow } from "@/app/actions/workflows";
+import { useState, useRef, useEffect } from "react";
+import { deleteWorkflow, renameWorkflow } from "@/app/actions/workflows";
 
 interface Props {
   id: string;
@@ -22,13 +22,33 @@ function formatRelative(iso: string) {
   return `Edited ${new Date(iso).toLocaleDateString("en-US", { year: "numeric", month: "numeric", day: "numeric" })} ${new Date(iso).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}`;
 }
 
-export function WorkflowRow({ id, name, updatedAt, runCount, hasActiveRun }: Props) {
+export function WorkflowRow({ id, name: initialName, updatedAt, runCount, hasActiveRun }: Props) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editName, setEditName] = useState(initialName);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (editing) {
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    }
+  }, [editing]);
 
   const handleDelete = async () => {
     setDeleting(true);
     await deleteWorkflow(id);
+  };
+
+  const handleRenameSubmit = async () => {
+    const trimmed = editName.trim();
+    if (trimmed && trimmed !== initialName) {
+      await renameWorkflow(id, trimmed);
+    } else {
+      setEditName(initialName);
+    }
+    setEditing(false);
   };
 
   return (
@@ -36,26 +56,62 @@ export function WorkflowRow({ id, name, updatedAt, runCount, hasActiveRun }: Pro
       <Link
         href={`/workflow/${id}`}
         className="block border border-neutral-200 rounded-xl p-4 bg-white hover:border-neutral-300 hover:shadow-sm transition-all group"
+        onClick={(e) => { if (editing) e.preventDefault(); }}
       >
         <div className="flex items-start justify-between gap-2">
-          <h3 className="font-semibold text-neutral-900 text-sm truncate">{name}</h3>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              setConfirmDelete(true);
-            }}
-            className="opacity-0 group-hover:opacity-100 text-neutral-400 hover:text-red-500 transition-all shrink-0 p-0.5 rounded"
-            title="Delete workflow"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <polyline points="3 6 5 6 21 6" />
-              <path d="M19 6l-1 14H6L5 6" />
-              <path d="M10 11v6M14 11v6" />
-              <path d="M9 6V4h6v2" />
-            </svg>
-          </button>
+          {editing ? (
+            <input
+              ref={inputRef}
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
+              onBlur={handleRenameSubmit}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") { e.preventDefault(); handleRenameSubmit(); }
+                if (e.key === "Escape") { setEditName(initialName); setEditing(false); }
+              }}
+              onClick={(e) => e.preventDefault()}
+              className="font-semibold text-neutral-900 text-sm border border-purple-400 rounded-md px-2 py-0.5 focus:outline-none focus:ring-2 focus:ring-purple-500/30 bg-white w-full max-w-[200px]"
+            />
+          ) : (
+            <h3 className="font-semibold text-neutral-900 text-sm truncate">{initialName}</h3>
+          )}
+          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all shrink-0">
+            {/* Rename button */}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setEditName(initialName);
+                setEditing(true);
+              }}
+              className="text-neutral-400 hover:text-purple-500 transition-colors p-0.5 rounded"
+              title="Rename workflow"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M17 3a2.85 2.85 0 0 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                <path d="m15 5 4 4" />
+              </svg>
+            </button>
+            {/* Delete button */}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setConfirmDelete(true);
+              }}
+              className="text-neutral-400 hover:text-red-500 transition-colors p-0.5 rounded"
+              title="Delete workflow"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polyline points="3 6 5 6 21 6" />
+                <path d="M19 6l-1 14H6L5 6" />
+                <path d="M10 11v6M14 11v6" />
+                <path d="M9 6V4h6v2" />
+              </svg>
+            </button>
+          </div>
         </div>
         <div className="mt-2 flex items-center justify-between">
           <p className="text-xs text-neutral-500">{formatRelative(updatedAt)}</p>
@@ -85,7 +141,7 @@ export function WorkflowRow({ id, name, updatedAt, runCount, hasActiveRun }: Pro
           >
             <h3 className="text-sm font-bold text-neutral-900 mb-1">Delete workflow?</h3>
             <p className="text-xs text-neutral-500 mb-5">
-              &ldquo;{name}&rdquo; and all its run history will be permanently deleted.
+              &ldquo;{initialName}&rdquo; and all its run history will be permanently deleted.
             </p>
             <div className="flex items-center justify-end gap-2">
               <button
@@ -108,3 +164,4 @@ export function WorkflowRow({ id, name, updatedAt, runCount, hasActiveRun }: Pro
     </>
   );
 }
+
