@@ -10,6 +10,29 @@
   --accent-amber: #f59e0b;
   --accent-blue: #3b82f6;
   color-scheme: light;
+
+  /* Canvas */
+  --canvas-bg: #f4f5f7;
+  --canvas-dot: rgba(0,0,0,0.12);
+
+  /* Card */
+  --card-bg: #ffffff;
+  --card-border: rgba(0,0,0,0.09);
+  --card-shadow: 0 2px 12px rgba(0,0,0,0.07), 0 1px 3px rgba(0,0,0,0.06);
+  --card-hover-border: rgba(124,58,237,0.35);
+  --card-hover-shadow: 0 8px 30px rgba(0,0,0,0.1), 0 0 0 2px rgba(124,58,237,0.1);
+  --card-header-bg: #fafafa;
+  --card-header-border: rgba(0,0,0,0.07);
+  --card-text: #111827;
+  --card-text-muted: #6b7280;
+  --card-text-faint: #9ca3af;
+
+  /* Controls */
+  --ctrl-bg: #ffffff;
+  --ctrl-border: rgba(0,0,0,0.1);
+  --ctrl-icon: #6b7280;
+  --ctrl-hover-bg: #f3f4f6;
+  --ctrl-hover-icon: #111827;
 }
 
 /* Dark mode overrides */
@@ -20,6 +43,26 @@
   --muted: #8e8e9f;
   --accent: #a855f7;
   color-scheme: dark;
+
+  --canvas-bg: #08080a;
+  --canvas-dot: rgba(255,255,255,0.06);
+
+  --card-bg: rgba(18,18,24,0.75);
+  --card-border: rgba(255,255,255,0.08);
+  --card-shadow: 0 4px 30px rgba(0,0,0,0.4), inset 0 1px 0 0 rgba(255,255,255,0.05);
+  --card-hover-border: rgba(168,85,247,0.35);
+  --card-hover-shadow: 0 12px 40px rgba(0,0,0,0.6), 0 0 20px rgba(168,85,247,0.1);
+  --card-header-bg: transparent;
+  --card-header-border: rgba(255,255,255,0.05);
+  --card-text: #f4f4f5;
+  --card-text-muted: #a1a1aa;
+  --card-text-faint: #71717a;
+
+  --ctrl-bg: rgba(15,15,20,0.85);
+  --ctrl-border: rgba(255,255,255,0.08);
+  --ctrl-icon: #a1a1aa;
+  --ctrl-hover-bg: rgba(255,255,255,0.08);
+  --ctrl-hover-icon: #f4f4f5;
 }
 
 /* Tailwind v4 dark mode via class */
@@ -34,8 +77,8 @@
   --font-sans: var(--font-sans);
 }
 
-html, body { 
-  height: 100%; 
+html, body {
+  height: 100%;
   background-color: var(--background);
   color: var(--foreground);
   transition: background-color 0.3s, color 0.3s;
@@ -48,7 +91,13 @@ body {
 
 /* ─── React Flow Canvas ──────────────────────────────────── */
 .react-flow__background {
-  background-color: #08080a !important;
+  background-color: var(--canvas-bg) !important;
+}
+
+/* Dot grid color */
+.react-flow__background pattern circle,
+.react-flow__background pattern rect {
+  fill: var(--canvas-dot) !important;
 }
 
 .react-flow__edge-path {
@@ -64,100 +113,85 @@ body {
   transition: stroke 0.15s;
 }
 
-/* Invalid connection line — React Flow adds .invalid class automatically */
 .react-flow__connection-path.invalid {
   stroke: #ef4444 !important;
-  filter: drop-shadow(0 0 5px rgba(239, 68, 68, 0.6));
+  filter: drop-shadow(0 0 5px rgba(239,68,68,0.6));
 }
 
-/* Edge flow animation */
 .react-flow__edge.animated .react-flow__edge-path {
   stroke: #c084fc !important;
   stroke-dasharray: 6;
   animation: dashdraw 0.5s linear infinite !important;
-  filter: drop-shadow(0 0 3px rgba(168, 85, 247, 0.4));
+  filter: drop-shadow(0 0 3px rgba(168,85,247,0.35));
 }
 
 @keyframes dashdraw {
   from { stroke-dashoffset: 12; }
 }
 
-/* ─── Premium Glassmorphism Node Card ─────────────────────── */
+/* ─── Node Card ────────────────────────────────────────────── */
 .nf-card {
-  background: rgba(18, 18, 24, 0.75) !important;
+  background: var(--card-bg) !important;
+  border: 1px solid var(--card-border) !important;
+  border-radius: 12px !important;
+  box-shadow: var(--card-shadow) !important;
+  transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+}
+
+/* Only apply backdrop-filter in dark mode */
+.dark .nf-card {
   backdrop-filter: blur(16px) saturate(120%);
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
-  border-radius: 14px !important;
-  box-shadow: 
-    0 4px 30px rgba(0, 0, 0, 0.4), 
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.05) !important;
-  transition: border-color 0.25s, box-shadow 0.25s, transform 0.25s;
 }
 
 .nf-card:hover {
-  border-color: rgba(168, 85, 247, 0.35) !important;
-  box-shadow: 
-    0 12px 40px rgba(0, 0, 0, 0.6), 
-    0 0 20px rgba(168, 85, 247, 0.1) !important;
+  border-color: var(--card-hover-border) !important;
+  box-shadow: var(--card-hover-shadow) !important;
   transform: translateY(-1px);
 }
 
-/* Node state colors overrides */
+/* Node state colors */
 .nf-error {
-  border-color: rgba(239, 68, 68, 0.4) !important;
-  box-shadow: 0 0 20px rgba(239, 68, 68, 0.15) !important;
+  border-color: rgba(239,68,68,0.4) !important;
+  box-shadow: 0 0 0 2px rgba(239,68,68,0.1), var(--card-shadow) !important;
 }
 
 .nf-queued {
-  border-color: rgba(245, 158, 11, 0.4) !important;
-  box-shadow: 0 0 20px rgba(245, 158, 11, 0.15) !important;
+  border-color: rgba(245,158,11,0.4) !important;
+  box-shadow: 0 0 0 2px rgba(245,158,11,0.1), var(--card-shadow) !important;
 }
 
 .nf-success {
-  border-color: rgba(16, 185, 129, 0.4) !important;
-  box-shadow: 0 0 20px rgba(16, 185, 129, 0.15) !important;
+  border-color: rgba(16,185,129,0.4) !important;
+  box-shadow: 0 0 0 2px rgba(16,185,129,0.1), var(--card-shadow) !important;
 }
 
-/* ─── Running Node Pulsating Glow ─────────────────────────── */
+/* ─── Running Node Pulse ───────────────────────────────────── */
 @keyframes nf-pulse {
   0%, 100% {
-    box-shadow:
-      0 0 0 1px rgba(168, 85, 247, 0.5),
-      0 0 25px 0 rgba(168, 85, 247, 0.25);
-    border-color: rgba(168, 85, 247, 0.6) !important;
+    box-shadow: 0 0 0 1px rgba(124,58,237,0.4), var(--card-shadow);
+    border-color: rgba(124,58,237,0.5) !important;
   }
   50% {
-    box-shadow:
-      0 0 0 4px rgba(168, 85, 247, 0.15),
-      0 0 40px 4px rgba(168, 85, 247, 0.5);
-    border-color: rgba(168, 85, 247, 0.9) !important;
+    box-shadow: 0 0 0 4px rgba(124,58,237,0.12), 0 0 30px 4px rgba(124,58,237,0.35);
+    border-color: rgba(124,58,237,0.8) !important;
   }
 }
 
-/* Border shimmer for running nodes */
-@keyframes nf-shimmer {
-  0%   { background-position: -200% center; }
-  100% { background-position: 200% center; }
-}
-
-/* Header indicator strip shimmer */
 @keyframes shimmerLine {
   0%   { transform: translateX(-160%); }
   100% { transform: translateX(280%); }
 }
 
-/* One-shot success flash */
 @keyframes nf-flash-green {
-  0%   { box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.8), 0 0 30px 4px rgba(16, 185, 129, 0.5); border-color: rgba(16, 185, 129, 0.9) !important; }
-  60%  { box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.3), 0 0 50px 8px rgba(16, 185, 129, 0.3); }
-  100% { box-shadow: 0 0 20px rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.4) !important; }
+  0%   { box-shadow: 0 0 0 2px rgba(16,185,129,0.7), 0 0 24px 4px rgba(16,185,129,0.4); border-color: rgba(16,185,129,0.8) !important; }
+  60%  { box-shadow: 0 0 0 4px rgba(16,185,129,0.2), 0 0 40px 6px rgba(16,185,129,0.2); }
+  100% { box-shadow: 0 0 0 2px rgba(16,185,129,0.15), var(--card-shadow); border-color: rgba(16,185,129,0.4) !important; }
 }
 
-/* One-shot fail flash */
 @keyframes nf-flash-red {
-  0%   { box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.8), 0 0 30px 4px rgba(239, 68, 68, 0.5); border-color: rgba(239, 68, 68, 0.9) !important; }
-  60%  { box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.3), 0 0 50px 8px rgba(239, 68, 68, 0.3); }
-  100% { box-shadow: 0 0 20px rgba(239, 68, 68, 0.15); border-color: rgba(239, 68, 68, 0.4) !important; }
+  0%   { box-shadow: 0 0 0 2px rgba(239,68,68,0.7), 0 0 24px 4px rgba(239,68,68,0.4); border-color: rgba(239,68,68,0.8) !important; }
+  60%  { box-shadow: 0 0 0 4px rgba(239,68,68,0.2), 0 0 40px 6px rgba(239,68,68,0.2); }
+  100% { box-shadow: 0 0 0 2px rgba(239,68,68,0.15), var(--card-shadow); border-color: rgba(239,68,68,0.4) !important; }
 }
 
 .nf-running {
@@ -199,25 +233,26 @@ body {
 
 /* ─── React Flow Controls & Minimap ──────────────────────── */
 .react-flow__controls {
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3) !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.1) !important;
+  border: 1px solid var(--ctrl-border) !important;
   border-radius: 10px !important;
   overflow: hidden;
-  background: rgba(15, 15, 20, 0.8) !important;
-  backdrop-filter: blur(12px);
+  background: var(--ctrl-bg) !important;
+  backdrop-filter: blur(8px);
 }
 
 .react-flow__controls-button {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+  border-bottom: 1px solid var(--ctrl-border) !important;
   background: transparent !important;
-  color: #a1a1aa !important;
-  fill: #a1a1aa !important;
+  color: var(--ctrl-icon) !important;
+  fill: var(--ctrl-icon) !important;
   transition: background 0.15s, color 0.15s;
 }
 
 .react-flow__controls-button:hover {
-  background: rgba(255, 255, 255, 0.08) !important;
-  color: #f4f4f5 !important;
+  background: var(--ctrl-hover-bg) !important;
+  color: var(--ctrl-hover-icon) !important;
+  fill: var(--ctrl-hover-icon) !important;
 }
 
 .react-flow__controls-button svg {
@@ -229,43 +264,65 @@ body {
 }
 
 .react-flow__minimap {
-  background-color: rgba(10, 10, 12, 0.8) !important;
-  backdrop-filter: blur(12px) !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5) !important;
+  background-color: var(--ctrl-bg) !important;
+  backdrop-filter: blur(8px) !important;
+  border: 1px solid var(--ctrl-border) !important;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.1) !important;
+  border-radius: 8px !important;
+  overflow: hidden;
 }
 
 /* ─── Scrollbar ──────────────────────────────────────────── */
-::-webkit-scrollbar { 
-  width: 6px; 
-  height: 6px; 
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
 }
-::-webkit-scrollbar-track { 
-  background: transparent; 
+::-webkit-scrollbar-track {
+  background: transparent;
 }
-::-webkit-scrollbar-thumb { 
-  background: rgba(255, 255, 255, 0.15); 
-  border-radius: 99px; 
+::-webkit-scrollbar-thumb {
+  background: rgba(0,0,0,0.15);
+  border-radius: 99px;
 }
-::-webkit-scrollbar-thumb:hover { 
-  background: rgba(255, 255, 255, 0.3); 
+.dark ::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.12);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0,0,0,0.3);
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255,255,255,0.25);
 }
 
 /* ─── Uppy overrides ─────────────────────────────────────── */
 .uppy-Dashboard-inner {
+  background-color: #ffffff !important;
+  border: 1px solid rgba(0,0,0,0.1) !important;
+}
+
+.dark .uppy-Dashboard-inner {
   background-color: #0e0e11 !important;
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
 }
 
 .uppy-Dashboard-AddFiles-title {
+  color: #111827 !important;
+}
+
+.dark .uppy-Dashboard-AddFiles-title {
   color: #f4f4f5 !important;
 }
 
 .uppy-Dashboard-browse {
-  color: #a855f7 !important;
+  color: #7c3aed !important;
 }
 
 .uppy-DashboardContent-bar {
+  background-color: #f9fafb !important;
+  border-bottom: 1px solid rgba(0,0,0,0.07) !important;
+}
+
+.dark .uppy-DashboardContent-bar {
   background-color: #121216 !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-bottom: 1px solid rgba(255,255,255,0.08) !important;
 }

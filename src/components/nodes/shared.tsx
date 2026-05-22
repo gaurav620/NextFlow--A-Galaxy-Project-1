@@ -27,8 +27,8 @@ export function TypedHandle({
         background: HANDLE_COLORS[type],
         width: 10,
         height: 10,
-        border: "2px solid #121218",
-        boxShadow: "0 0 0 1px rgba(255,255,255,0.05)",
+        border: "2px solid var(--card-bg)",
+        boxShadow: "0 0 0 1px rgba(0,0,0,0.12)",
         top,
       }}
     />
@@ -54,12 +54,12 @@ export function NodeRunButton({ nodeId }: { nodeId?: string } = {}) {
       disabled={isRunning}
       title={isRunning ? "Workflow is running…" : "Run workflow/node"}
       className={cn(
-        "inline-flex items-center gap-1.5 text-[11px] px-2 py-0.5 rounded-md font-semibold transition-all",
+        "inline-flex items-center gap-1.5 text-[11px] px-2 py-0.5 rounded-md font-semibold transition-all border",
         thisNodeRunning
-          ? "bg-purple-500/10 text-purple-400 border border-purple-500/20 cursor-not-allowed"
+          ? "bg-purple-50 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-500/20 cursor-not-allowed"
           : isRunning
-          ? "bg-white/5 text-zinc-500 cursor-not-allowed"
-          : "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 active:scale-95"
+          ? "bg-neutral-100 dark:bg-white/5 text-neutral-400 dark:text-zinc-500 border-transparent cursor-not-allowed"
+          : "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 active:scale-95"
       )}
     >
       {thisNodeRunning ? (
@@ -81,19 +81,19 @@ function NodeStateBadge({ state }: { state: 'idle' | 'queued' | 'running' | 'suc
   switch (state) {
     case 'queued':
       label = 'Queued';
-      classes = 'bg-amber-500/10 text-amber-400 border-amber-500/20';
+      classes = 'bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-500/20';
       break;
     case 'running':
       label = 'Running';
-      classes = 'bg-purple-500/10 text-purple-400 border-purple-500/20';
+      classes = 'bg-purple-50 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-500/20';
       break;
     case 'success':
       label = 'Done';
-      classes = 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
+      classes = 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20';
       break;
     case 'failed':
       label = 'Failed';
-      classes = 'bg-red-500/10 text-red-400 border-red-500/20';
+      classes = 'bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border-red-200 dark:border-red-500/20';
       break;
   }
 
@@ -181,8 +181,8 @@ export function NodeShell({
         </div>
       )}
 
-      <div className="flex items-center justify-between px-3 py-2 border-b border-white/5">
-        <div className="flex items-center gap-1.5 text-[13px] font-bold text-zinc-100 min-w-0 pr-2">
+      <div className="flex items-center justify-between px-3 py-2 border-b border-neutral-100 dark:border-white/5 bg-neutral-50 dark:bg-transparent rounded-t-[11px]">
+        <div className="flex items-center gap-1.5 text-[13px] font-bold text-neutral-900 dark:text-zinc-100 min-w-0 pr-2">
           {icon && <span className="shrink-0">{icon}</span>}
           <span className="truncate">{title}</span>
           <NodeStateBadge state={nodeState} />
@@ -191,7 +191,7 @@ export function NodeShell({
           {badge !== undefined ? badge : <NodeRunButton nodeId={id} />}
           {closable && (
             <button
-              className="p-1 rounded-md hover:bg-red-500/15 hover:text-red-400 text-zinc-500 transition-colors"
+              className="p-1 rounded-md hover:bg-red-50 dark:hover:bg-red-500/15 hover:text-red-500 dark:hover:text-red-400 text-neutral-400 dark:text-zinc-500 transition-colors"
               onClick={() => onNodesChange([{ id, type: "remove" }])}
               title="Delete node"
             >
@@ -200,7 +200,7 @@ export function NodeShell({
           )}
         </div>
       </div>
-      <div className="p-3 text-[12px] text-zinc-300">{children}</div>
+      <div className="p-3 text-[12px] text-neutral-700 dark:text-zinc-300">{children}</div>
     </div>
   );
 }
@@ -226,7 +226,7 @@ export function FieldRow({
       <div className="flex items-center justify-between gap-2 px-1">
         <span
           className={cn(
-            "text-[12px] font-medium text-zinc-300 flex items-center gap-1.5 shrink-0",
+            "text-[12px] font-medium text-neutral-600 dark:text-zinc-300 flex items-center gap-1.5 shrink-0",
             side === "right" && "ml-auto"
           )}
         >

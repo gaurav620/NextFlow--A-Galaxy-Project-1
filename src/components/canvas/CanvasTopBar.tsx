@@ -68,12 +68,12 @@ export function CanvasTopBar({ workflowId, onToggleHistory }: Props) {
   };
 
   return (
-    <header className="h-14 px-4 flex items-center justify-between border-b border-white/5 bg-zinc-950/80 backdrop-blur-md text-white shrink-0">
+    <header className="h-14 px-4 flex items-center justify-between border-b border-neutral-200 dark:border-white/5 bg-white/90 dark:bg-zinc-950/80 backdrop-blur-md text-neutral-900 dark:text-white shrink-0">
       {/* Left: back + name */}
       <div className="flex items-center gap-2 min-w-0">
         <Link
           href="/dashboard"
-          className="p-1.5 rounded-md hover:bg-white/10 text-zinc-400 hover:text-white transition-colors shrink-0"
+          className="p-1.5 rounded-md hover:bg-neutral-100 dark:hover:bg-white/10 text-neutral-400 dark:text-zinc-400 hover:text-neutral-900 dark:hover:text-white transition-colors shrink-0"
           title="Back to workflows"
         >
           <ArrowLeft size={15} />
@@ -89,13 +89,13 @@ export function CanvasTopBar({ workflowId, onToggleHistory }: Props) {
             onKeyDown={(e) => {
               if (e.key === "Enter" || e.key === "Escape") setEditing(false);
             }}
-            className="text-sm font-semibold px-2 py-1 border border-purple-500 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500/30 bg-zinc-900 text-white max-w-48"
+            className="text-sm font-semibold px-2 py-1 border border-purple-400 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500/30 bg-white dark:bg-zinc-900 text-neutral-900 dark:text-white max-w-48"
           />
         ) : (
           <button
             type="button"
             onClick={() => setEditing(true)}
-            className="text-sm font-semibold px-2 py-1 rounded-md hover:bg-white/10 text-zinc-100 truncate max-w-48"
+            className="text-sm font-semibold px-2 py-1 rounded-md hover:bg-neutral-100 dark:hover:bg-white/10 text-neutral-800 dark:text-zinc-100 truncate max-w-48"
             title="Click to rename"
           >
             {name}
@@ -107,12 +107,12 @@ export function CanvasTopBar({ workflowId, onToggleHistory }: Props) {
       <div className="flex items-center gap-1.5">
         {/* Est / Bal pills — Magica style */}
         <div className="hidden md:flex items-center gap-1.5 mr-1">
-          <div className="flex items-center gap-1 px-2.5 py-1 rounded-md border border-white/5 bg-zinc-900/50 text-xs text-zinc-400">
-            <Timer size={11} className="text-zinc-500" />
+          <div className="flex items-center gap-1 px-2.5 py-1 rounded-md border border-neutral-200 dark:border-white/5 bg-neutral-100 dark:bg-zinc-900/50 text-xs text-neutral-500 dark:text-zinc-400">
+            <Timer size={11} className="text-neutral-400 dark:text-zinc-500" />
             <span>Est 0.01 M</span>
           </div>
-          <div className="flex items-center gap-1 px-2.5 py-1 rounded-md border border-white/5 bg-zinc-900/50 text-xs text-zinc-400">
-            <Coins size={11} className="text-zinc-500" />
+          <div className="flex items-center gap-1 px-2.5 py-1 rounded-md border border-neutral-200 dark:border-white/5 bg-neutral-100 dark:bg-zinc-900/50 text-xs text-neutral-500 dark:text-zinc-400">
+            <Coins size={11} className="text-neutral-400 dark:text-zinc-500" />
             <span>Bal 30.33 M</span>
           </div>
         </div>
@@ -121,7 +121,7 @@ export function CanvasTopBar({ workflowId, onToggleHistory }: Props) {
         <button
           type="button"
           onClick={importJson}
-          className="p-2 rounded-md text-zinc-400 hover:bg-white/10 hover:text-white transition-colors"
+          className="p-2 rounded-md text-neutral-500 dark:text-zinc-400 hover:bg-neutral-100 dark:hover:bg-white/10 hover:text-neutral-900 dark:hover:text-white transition-colors"
           title="Import JSON"
         >
           <Upload size={15} />
@@ -131,7 +131,7 @@ export function CanvasTopBar({ workflowId, onToggleHistory }: Props) {
         <button
           type="button"
           onClick={exportJson}
-          className="p-2 rounded-md text-zinc-400 hover:bg-white/10 hover:text-white transition-colors"
+          className="p-2 rounded-md text-neutral-500 dark:text-zinc-400 hover:bg-neutral-100 dark:hover:bg-white/10 hover:text-neutral-900 dark:hover:text-white transition-colors"
           title="Export JSON"
         >
           <Download size={15} />
@@ -141,7 +141,7 @@ export function CanvasTopBar({ workflowId, onToggleHistory }: Props) {
         <button
           type="button"
           onClick={onToggleHistory}
-          className="p-2 rounded-md text-zinc-400 hover:bg-white/10 hover:text-white transition-colors"
+          className="p-2 rounded-md text-neutral-500 dark:text-zinc-400 hover:bg-neutral-100 dark:hover:bg-white/10 hover:text-neutral-900 dark:hover:text-white transition-colors"
           title="Execution History"
         >
           <Clock size={15} />
@@ -184,10 +184,10 @@ export function CanvasTopBar({ workflowId, onToggleHistory }: Props) {
         </button>
 
         {/* Divider */}
-        <div className="w-px h-5 bg-white/10 mx-1" />
+        <div className="w-px h-5 bg-neutral-200 dark:bg-white/10 mx-1" />
 
         {/* Clerk User Button */}
-        <div className="flex items-center justify-center p-0.5 rounded-full hover:bg-white/10 transition-colors">
+        <div className="flex items-center justify-center p-0.5 rounded-full hover:bg-neutral-100 dark:hover:bg-white/10 transition-colors">
           <UserButton />
         </div>
       </div>

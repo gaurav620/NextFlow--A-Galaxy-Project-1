@@ -35,7 +35,7 @@ export function CropImageNode({ id, data }: NodeProps) {
           handleId="Input Image"
           connected={isConnected("Input Image")}
         >
-          <span className="text-[11px] text-zinc-500 ml-1.5 italic">
+          <span className="text-[11px] text-neutral-400 dark:text-zinc-500 ml-1.5 italic">
             {isConnected("Input Image") ? "Connected ✓" : "Connect image output"}
           </span>
         </FieldRow>
@@ -63,7 +63,7 @@ export function CropImageNode({ id, data }: NodeProps) {
                   disabled={connected}
                   className="flex-1 accent-amber-500 disabled:opacity-30 cursor-pointer"
                 />
-                <span className="text-[11px] tabular-nums text-zinc-400 w-8 text-right font-semibold">
+                <span className="text-[11px] tabular-nums text-neutral-500 dark:text-zinc-400 w-8 text-right font-semibold">
                   {d[key] ?? 0}
                 </span>
               </div>
@@ -72,13 +72,13 @@ export function CropImageNode({ id, data }: NodeProps) {
         })}
 
         {/* Output */}
-        <div className="mt-2 border-t border-white/5 pt-2 relative">
+        <div className="mt-2 border-t border-neutral-100 dark:border-white/5 pt-2 relative">
           <FieldRow label="Output Image" type="image" side="right" handleId="Output Image" />
 
           {/* Running state */}
           {isRunning && (
-            <div className="mt-2 flex items-center gap-2 text-[11px] text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-lg p-2.5">
-              <Loader2 size={11} className="animate-spin text-amber-400" />
+            <div className="mt-2 flex items-center gap-2 text-[11px] text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-lg p-2.5">
+              <Loader2 size={11} className="animate-spin" />
               <span className="italic">Processing image…</span>
             </div>
           )}
@@ -90,9 +90,9 @@ export function CropImageNode({ id, data }: NodeProps) {
               <img
                 src={d.outputImageUrl}
                 alt="Crop output"
-                className="w-full h-24 object-cover rounded-lg border border-white/10"
+                className="w-full h-24 object-cover rounded-lg border border-neutral-200 dark:border-white/10"
               />
-              <p className="text-[10px] text-zinc-500 mt-1 truncate" title={d.outputImageUrl}>
+              <p className="text-[10px] text-neutral-400 dark:text-zinc-500 mt-1 truncate" title={d.outputImageUrl}>
                 {d.outputImageUrl.slice(0, 50)}…
               </p>
             </div>
@@ -100,8 +100,8 @@ export function CropImageNode({ id, data }: NodeProps) {
 
           {/* Empty state */}
           {!isRunning && !d.outputImageUrl && (
-            <div className="mt-2 h-16 rounded-lg border border-dashed border-white/10 bg-zinc-950/40 flex items-center justify-center">
-              <span className="text-[10px] text-zinc-500 italic">Output will appear here</span>
+            <div className="mt-2 h-16 rounded-lg border border-dashed border-neutral-200 dark:border-white/10 bg-neutral-50 dark:bg-zinc-950/40 flex items-center justify-center">
+              <span className="text-[10px] text-neutral-400 dark:text-zinc-500 italic">Output will appear here</span>
             </div>
           )}
         </div>

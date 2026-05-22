@@ -100,7 +100,7 @@ export function CanvasBottomBar({ showMinimap, onToggleMinimap }: Props) {
   return (
     <>
       {/* Bottom center bar — Galaxy.ai style: premium glassmorphic pill */}
-      <div className="absolute left-1/2 -translate-x-1/2 bottom-5 z-10 flex items-center gap-1 bg-zinc-950/80 border border-white/5 rounded-2xl px-2 py-1.5 shadow-2xl backdrop-blur-md">
+      <div className="absolute left-1/2 -translate-x-1/2 bottom-5 z-10 flex items-center gap-1 bg-white/90 dark:bg-zinc-950/80 border border-neutral-200 dark:border-white/5 rounded-2xl px-2 py-1.5 shadow-lg dark:shadow-2xl backdrop-blur-md">
         {/* Undo / Redo */}
         <ToolBtn onClick={undo} title="Undo (⌘Z)"><Undo2 size={14} /></ToolBtn>
         <ToolBtn onClick={redo} title="Redo (⌘⇧Z)"><Redo2 size={14} /></ToolBtn>
@@ -112,7 +112,7 @@ export function CanvasBottomBar({ showMinimap, onToggleMinimap }: Props) {
         <button
           onClick={() => rf.zoomTo(1)}
           title="Reset zoom (click)"
-          className="px-2 h-8 text-[11px] tabular-nums text-zinc-400 hover:bg-white/10 hover:text-white rounded-lg transition-colors font-medium min-w-[44px]"
+          className="px-2 h-8 text-[11px] tabular-nums text-neutral-500 dark:text-zinc-400 hover:bg-neutral-100 dark:hover:bg-white/10 hover:text-neutral-900 dark:hover:text-white rounded-lg transition-colors font-medium min-w-11"
         >
           {Math.round(zoom * 100)}%
         </button>
@@ -144,10 +144,10 @@ export function CanvasBottomBar({ showMinimap, onToggleMinimap }: Props) {
       {/* Bottom right: minimap toggle */}
       <button
         onClick={onToggleMinimap}
-        className={`absolute right-4 bottom-5 z-10 p-2.5 rounded-lg border border-white/5 backdrop-blur-md transition-colors ${
-          showMinimap 
-            ? "bg-purple-600 text-white border-purple-600 shadow-lg shadow-purple-500/20" 
-            : "bg-zinc-950/80 hover:bg-white/10 text-zinc-400 hover:text-white"
+        className={`absolute right-4 bottom-5 z-10 p-2.5 rounded-lg border backdrop-blur-md transition-colors ${
+          showMinimap
+            ? "bg-purple-600 text-white border-purple-600 shadow-lg shadow-purple-500/20"
+            : "bg-white/90 dark:bg-zinc-950/80 border-neutral-200 dark:border-white/5 text-neutral-500 dark:text-zinc-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-white/10"
         }`}
         title="Toggle minimap"
       >
@@ -172,7 +172,7 @@ function ToolBtn({
     <button
       onClick={onClick}
       title={title}
-      className="w-8 h-8 flex items-center justify-center rounded-lg text-zinc-400 hover:bg-white/10 hover:text-white transition-colors"
+      className="w-8 h-8 flex items-center justify-center rounded-lg text-neutral-500 dark:text-zinc-400 hover:bg-neutral-100 dark:hover:bg-white/10 hover:text-neutral-900 dark:hover:text-white transition-colors"
     >
       {children}
     </button>
@@ -180,5 +180,5 @@ function ToolBtn({
 }
 
 function Separator() {
-  return <div className="w-px h-5 bg-white/10 mx-0.5" />;
+  return <div className="w-px h-5 bg-neutral-200 dark:bg-white/10 mx-0.5" />;
 }

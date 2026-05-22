@@ -45,8 +45,8 @@ export function GeminiNode({ id, data }: NodeProps) {
     >
       <div className="space-y-2">
         {/* Model horizontal pills */}
-        <div className="flex items-center justify-between gap-1 pb-2 border-b border-white/5 mb-1.5 px-0.5">
-          <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">Model</span>
+        <div className="flex items-center justify-between gap-1 pb-2 border-b border-neutral-100 dark:border-white/5 mb-1.5 px-0.5">
+          <span className="text-[10px] text-neutral-400 dark:text-zinc-500 font-bold uppercase tracking-wider">Model</span>
           <div className="flex gap-1">
             {GEMINI_MODELS.map((m) => {
               const active = currentModel === m.displayName;
@@ -58,14 +58,13 @@ export function GeminiNode({ id, data }: NodeProps) {
                   className={cn(
                     "px-2 py-0.5 text-[9px] rounded-md font-semibold border transition-all duration-150",
                     active
-                      ? "bg-purple-500/15 border-purple-500/40 text-purple-300 shadow-md shadow-purple-500/10"
-                      : "bg-white/5 border-white/5 text-zinc-500 hover:bg-white/10 hover:text-zinc-300",
-                    m.free && !active && "border-emerald-500/10"
+                      ? "bg-purple-50 dark:bg-purple-500/15 border-purple-300 dark:border-purple-500/40 text-purple-600 dark:text-purple-300 shadow-sm"
+                      : "bg-neutral-100 dark:bg-white/5 border-neutral-200 dark:border-white/5 text-neutral-500 dark:text-zinc-500 hover:bg-neutral-200 dark:hover:bg-white/10 hover:text-neutral-700 dark:hover:text-zinc-300"
                   )}
                 >
                   {m.label}
                   {m.free && (
-                    <span className={cn("ml-0.5", active ? "text-purple-400" : "text-emerald-600")}>●</span>
+                    <span className={cn("ml-0.5", active ? "text-purple-500 dark:text-purple-400" : "text-emerald-500")}>●</span>
                   )}
                 </button>
               );
@@ -73,7 +72,7 @@ export function GeminiNode({ id, data }: NodeProps) {
           </div>
         </div>
         {/* Active model hint */}
-        <div className="text-[9px] text-zinc-600 px-0.5 -mt-1 mb-0.5">
+        <div className="text-[9px] text-neutral-400 dark:text-zinc-600 px-0.5 -mt-1 mb-0.5">
           API: {currentModelDef.apiModel}{currentModelDef.free ? " · free tier" : ""}
         </div>
 
@@ -84,7 +83,7 @@ export function GeminiNode({ id, data }: NodeProps) {
             placeholder="Enter your prompt…"
             rows={2}
             disabled={isConnected("Prompt")}
-            className="w-full text-xs px-2.5 py-1.5 border border-white/5 rounded-lg resize-none focus:outline-none focus:border-purple-500/50 disabled:opacity-40 disabled:bg-white/5 disabled:text-zinc-500 bg-zinc-900/50 text-zinc-100 placeholder:text-zinc-500"
+            className="w-full text-xs px-2.5 py-1.5 border border-neutral-200 dark:border-white/5 rounded-lg resize-none focus:outline-none focus:border-purple-400 dark:focus:border-purple-500/50 disabled:opacity-40 disabled:bg-neutral-100 dark:disabled:bg-white/5 disabled:text-neutral-400 dark:disabled:text-zinc-500 bg-white dark:bg-zinc-900/50 text-neutral-900 dark:text-zinc-100 placeholder:text-neutral-400 dark:placeholder:text-zinc-500"
           />
         </FieldRow>
 
@@ -95,16 +94,16 @@ export function GeminiNode({ id, data }: NodeProps) {
             placeholder="You are a helpful assistant…"
             rows={2}
             disabled={isConnected("System Prompt")}
-            className="w-full text-xs px-2.5 py-1.5 border border-white/5 rounded-lg resize-none focus:outline-none focus:border-purple-500/50 disabled:opacity-40 disabled:bg-white/5 disabled:text-zinc-500 bg-zinc-900/50 text-zinc-100 placeholder:text-zinc-500"
+            className="w-full text-xs px-2.5 py-1.5 border border-neutral-200 dark:border-white/5 rounded-lg resize-none focus:outline-none focus:border-purple-400 dark:focus:border-purple-500/50 disabled:opacity-40 disabled:bg-neutral-100 dark:disabled:bg-white/5 disabled:text-neutral-400 dark:disabled:text-zinc-500 bg-white dark:bg-zinc-900/50 text-neutral-900 dark:text-zinc-100 placeholder:text-neutral-400 dark:placeholder:text-zinc-500"
           />
         </FieldRow>
 
         {/* Image (Vision) — Upload button or preview when not connected */}
         <FieldRow label="Image (Vision)" type="image" side="left" handleId="Image (Vision)" connected={imageConnected}>
           {imageConnected ? (
-            <span className="text-[11px] text-zinc-500 ml-1.5 italic">Connected ✓</span>
+            <span className="text-[11px] text-neutral-400 dark:text-zinc-500 ml-1.5 italic">Connected ✓</span>
           ) : d.visionImageUrl ? (
-            <div className="relative group w-20 h-12 rounded-lg border border-white/10 overflow-hidden mt-1 ml-1">
+            <div className="relative group w-20 h-12 rounded-lg border border-neutral-200 dark:border-white/10 overflow-hidden mt-1 ml-1">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={d.visionImageUrl}
@@ -122,7 +121,7 @@ export function GeminiNode({ id, data }: NodeProps) {
           ) : (
             <button
               onClick={() => setVisionUploadOpen(true)}
-              className="inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1 border border-white/5 rounded-lg hover:bg-white/10 transition-colors text-zinc-300 ml-1"
+              className="inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1 border border-neutral-200 dark:border-white/5 rounded-lg hover:bg-neutral-100 dark:hover:bg-white/10 transition-colors text-neutral-600 dark:text-zinc-300 ml-1"
             >
               <Upload size={10} /> Upload Image
             </button>
@@ -130,29 +129,29 @@ export function GeminiNode({ id, data }: NodeProps) {
         </FieldRow>
 
         <FieldRow label="Video" type="video" side="left" handleId="Video" connected={isConnected("Video")}>
-          <span className="text-[11px] text-zinc-500 ml-1.5 italic">Connect video</span>
+          <span className="text-[11px] text-neutral-400 dark:text-zinc-500 ml-1.5 italic">Connect video</span>
         </FieldRow>
         <FieldRow label="Audio" type="audio" side="left" handleId="Audio" connected={isConnected("Audio")}>
-          <span className="text-[11px] text-zinc-500 ml-1.5 italic">Connect audio</span>
+          <span className="text-[11px] text-neutral-400 dark:text-zinc-500 ml-1.5 italic">Connect audio</span>
         </FieldRow>
         <FieldRow label="File" type="file" side="left" handleId="File" connected={isConnected("File")}>
-          <span className="text-[11px] text-zinc-500 ml-1.5 italic">Connect file</span>
+          <span className="text-[11px] text-neutral-400 dark:text-zinc-500 ml-1.5 italic">Connect file</span>
         </FieldRow>
 
         {/* Settings section */}
         <button
           onClick={() => setSettingsOpen((v) => !v)}
-          className="w-full text-[11px] text-zinc-400 flex items-center gap-1 mt-1.5 hover:text-zinc-200 transition-colors"
+          className="w-full text-[11px] text-neutral-500 dark:text-zinc-400 flex items-center gap-1 mt-1.5 hover:text-neutral-800 dark:hover:text-zinc-200 transition-colors"
         >
           {settingsOpen ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
           <span>Settings</span>
         </button>
         {settingsOpen && (
-          <div className="mt-1 space-y-2.5 pl-1 pb-1 bg-zinc-900/40 border border-white/5 rounded-lg p-2.5">
+          <div className="mt-1 space-y-2.5 pl-1 pb-1 bg-neutral-50 dark:bg-zinc-900/40 border border-neutral-200 dark:border-white/5 rounded-lg p-2.5">
             <div>
-              <label className="text-[10px] text-zinc-400 flex items-center justify-between mb-1">
+              <label className="text-[10px] text-neutral-500 dark:text-zinc-400 flex items-center justify-between mb-1">
                 Temperature
-                <span className="tabular-nums font-semibold text-zinc-200">
+                <span className="tabular-nums font-semibold text-neutral-800 dark:text-zinc-200">
                   {(d as unknown as Record<string, unknown>).temperature as number ?? 0.7}
                 </span>
               </label>
@@ -164,9 +163,9 @@ export function GeminiNode({ id, data }: NodeProps) {
               />
             </div>
             <div>
-              <label className="text-[10px] text-zinc-400 flex items-center justify-between mb-1">
+              <label className="text-[10px] text-neutral-500 dark:text-zinc-400 flex items-center justify-between mb-1">
                 Max Tokens
-                <span className="tabular-nums font-semibold text-zinc-200">
+                <span className="tabular-nums font-semibold text-neutral-800 dark:text-zinc-200">
                   {(d as unknown as Record<string, unknown>).maxTokens as number ?? 2048}
                 </span>
               </label>
@@ -181,20 +180,20 @@ export function GeminiNode({ id, data }: NodeProps) {
         )}
 
         {/* Output / Response */}
-        <div className="mt-2 border-t border-white/5 pt-2 relative">
+        <div className="mt-2 border-t border-neutral-100 dark:border-white/5 pt-2 relative">
           <FieldRow label="Response" type="text" side="right" handleId="Response" />
           {isRunning ? (
-            <div className="mt-2 flex items-center gap-2 text-[11px] text-purple-400 bg-purple-500/10 border border-purple-500/20 rounded-lg p-2.5">
-              <Loader2 size={11} className="animate-spin text-purple-400" />
+            <div className="mt-2 flex items-center gap-2 text-[11px] text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-500/10 border border-purple-200 dark:border-purple-500/20 rounded-lg p-2.5">
+              <Loader2 size={11} className="animate-spin" />
               <span className="italic">Thinking…</span>
             </div>
           ) : d.responseText ? (
-            <div className="mt-2 p-2.5 text-[11px] bg-gradient-to-br from-purple-950/20 to-zinc-900/20 border border-purple-500/20 rounded-lg max-h-32 overflow-y-auto whitespace-pre-wrap text-zinc-300 leading-relaxed" style={{ animation: "fadeIn 0.3s ease-out" }}>
+            <div className="mt-2 p-2.5 text-[11px] bg-purple-50/60 dark:bg-linear-to-br dark:from-purple-950/20 dark:to-zinc-900/20 border border-purple-100 dark:border-purple-500/20 rounded-lg max-h-32 overflow-y-auto whitespace-pre-wrap text-neutral-700 dark:text-zinc-300 leading-relaxed" style={{ animation: "fadeIn 0.3s ease-out" }}>
               {d.responseText}
             </div>
           ) : (
-            <div className="mt-2 h-10 rounded-lg border border-dashed border-white/10 flex items-center justify-center">
-              <span className="text-[10px] text-zinc-500 italic">No output yet</span>
+            <div className="mt-2 h-10 rounded-lg border border-dashed border-neutral-200 dark:border-white/10 flex items-center justify-center">
+              <span className="text-[10px] text-neutral-400 dark:text-zinc-500 italic">No output yet</span>
             </div>
           )}
         </div>
