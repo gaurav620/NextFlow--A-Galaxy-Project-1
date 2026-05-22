@@ -29,6 +29,7 @@ interface CanvasState {
   runningNodeIds: Set<string>;
   nodeStates: Record<string, 'idle' | 'queued' | 'running' | 'success' | 'failed'>;
   isRunning: boolean;           // global running flag for UI
+  activeRunId: string | null;   // currently running run ID (for cancel)
   runRequest: string | null;    // nodeId to run, or 'full' for all
   past: HistoryEntry[];
   future: HistoryEntry[];
@@ -52,6 +53,7 @@ interface CanvasState {
   setAllNodeStates: (states: Record<string, 'idle' | 'queued' | 'running' | 'success' | 'failed'>) => void;
   resetNodeStates: () => void;
   setIsRunning: (v: boolean) => void;
+  setActiveRunId: (id: string | null) => void;
   requestRun: (nodeId?: string) => void;  // called from node Run buttons
   clearRunRequest: () => void;
   pushHistory: () => void;
@@ -94,6 +96,7 @@ export const useCanvas = create<CanvasState>((set, get) => ({
   runningNodeIds: new Set(),
   nodeStates: {},
   isRunning: false,
+  activeRunId: null,
   runRequest: null,
   past: [],
   future: [],
@@ -228,6 +231,7 @@ export const useCanvas = create<CanvasState>((set, get) => ({
   }),
   resetNodeStates: () => set({ nodeStates: {}, runningNodeIds: new Set(), isRunning: false }),
   setIsRunning: (v) => set({ isRunning: v }),
+  setActiveRunId: (id) => set({ activeRunId: id }),
   requestRun: (nodeId) => set({ runRequest: nodeId ?? "full" }),
   clearRunRequest: () => set({ runRequest: null }),
 

@@ -2,6 +2,7 @@ import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 300; // keep SSE alive for 5 min on Vercel Pro
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 

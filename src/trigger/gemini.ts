@@ -6,7 +6,7 @@ import { z } from "zod";
 const Payload = z.object({
   prompt: z.string(),
   system: z.string().optional(),
-  model: z.string().default("gemini-1.5-flash"),
+  model: z.string().default("gemini-2.5-flash"),
   imageUrl: z.string().optional(),
 });
 

@@ -6,6 +6,7 @@ import { WorkflowGraphSchema } from "@/lib/types";
 import { executeWorkflow } from "@/lib/execute";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 300; // 5 min for long workflows (Vercel Pro)
 
 const Body = z.object({
   workflowId: z.string(),
@@ -44,7 +45,7 @@ export async function POST(req: Request) {
     // Create run + nodeRuns in DB
     const run = await prisma.run.create({
       data: {
-        id: runId, // Use client-provided runId if present!
+        id: runId,
         workflowId,
         userId,
         scope,
@@ -61,14 +62,30 @@ export async function POST(req: Request) {
       },
     });
 
-    // Trigger the workflow execution
-    if (process.env.TRIGGER_DEV_ENABLED !== "true") {
-      console.log(`[runs/route] Local mode detected: executing workflow in-process for runId=${run.id}`);
-      // Asynchronous in-process execution for local dev (keeps local dev extremely reliable)
-      executeWorkflow({
+    // Always try Trigger.dev first (works in both prod and local dev with trigger:dev).
+    // Falls back to in-process ONLY when Trigger.dev SDK throws (local dev without trigger:dev running).
+    let usedTrigger = false;
+    try {
+      const { workflowOrchestratorTask } = await import("@/trigger/workflow-orchestrator");
+      const handle = await workflowOrchestratorTask.trigger({
         runId: run.id,
         workflowId,
-        graph: graph as any,
+        graph: graph as never,
+        scope,
+        targetNodeIds,
+      });
+      console.log(`[runs/route] Triggered workflow-orchestrator task runId=${run.id} handleId=${handle.id}`);
+      usedTrigger = true;
+    } catch (triggerErr) {
+      console.warn(`[runs/route] Trigger.dev unavailable, falling back to in-process:`, String(triggerErr).slice(0, 200));
+    }
+
+    if (!usedTrigger) {
+      // In-process fallback for local dev without trigger:dev running
+      void executeWorkflow({
+        runId: run.id,
+        workflowId,
+        graph: graph as never,
         scope,
         targetNodeIds,
         onEvent: (evt) => {
@@ -77,27 +94,6 @@ export async function POST(req: Request) {
       }).catch((err) => {
         console.error(`[runs/route] In-process execution failed for runId=${run.id}:`, err);
       });
-    } else {
-      // Trigger the workflow orchestrator task asynchronously on Trigger.dev
-      try {
-        const { workflowOrchestratorTask } = await import("@/trigger/workflow-orchestrator");
-        const handle = await workflowOrchestratorTask.trigger({
-          runId: run.id,
-          workflowId,
-          graph: graph as any,
-          scope,
-          targetNodeIds,
-        });
-        console.log(`[runs/route] Triggered workflow-orchestrator task runId=${run.id} handleId=${handle.id}`);
-      } catch (triggerErr) {
-        console.error(`[runs/route] Failed to trigger workflow-orchestrator task for runId=${run.id}:`, triggerErr);
-        // Update database status of the Run so it doesn't hang in "running" if trigger fails
-        await prisma.run.update({
-          where: { id: run.id },
-          data: { status: "error", finishedAt: new Date() },
-        }).catch((dbErr) => console.error("[runs/route] Failed to update Run status on trigger failure:", dbErr));
-        return NextResponse.json({ error: "failed_to_trigger", message: String(triggerErr) }, { status: 500 });
-      }
     }
 
     return NextResponse.json({ runId: run.id });

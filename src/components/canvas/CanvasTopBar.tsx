@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { ArrowLeft, Play, Clock, Download, Upload, Loader2, Timer, Coins } from "lucide-react";
+import { ArrowLeft, Play, Clock, Download, Upload, Loader2, Timer, Coins, Square } from "lucide-react";
 import { useCanvas, type FlowNode, type FlowEdge } from "@/stores/canvas";
 import { useRun } from "@/lib/use-run";
 import { UserButton } from "@clerk/nextjs";
@@ -18,7 +18,7 @@ export function CanvasTopBar({ workflowId, onToggleHistory }: Props) {
   const setName = useCanvas((s) => s.setName);
   const selectedIds = useCanvas((s) => s.selectedIds);
   const [editing, setEditing] = useState(false);
-  const { running, run } = useRun(workflowId);
+  const { running, run, cancelRun } = useRun(workflowId);
 
   const handleRun = () => {
     if (selectedIds.size > 1) {
@@ -81,6 +81,8 @@ export function CanvasTopBar({ workflowId, onToggleHistory }: Props) {
         {editing ? (
           <input
             autoFocus
+            aria-label="Workflow name"
+            title="Workflow name"
             value={name}
             onChange={(e) => setName(e.target.value)}
             onBlur={() => setEditing(false)}
@@ -91,6 +93,7 @@ export function CanvasTopBar({ workflowId, onToggleHistory }: Props) {
           />
         ) : (
           <button
+            type="button"
             onClick={() => setEditing(true)}
             className="text-sm font-semibold px-2 py-1 rounded-md hover:bg-white/10 text-zinc-100 truncate max-w-48"
             title="Click to rename"
@@ -116,6 +119,7 @@ export function CanvasTopBar({ workflowId, onToggleHistory }: Props) {
 
         {/* Import */}
         <button
+          type="button"
           onClick={importJson}
           className="p-2 rounded-md text-zinc-400 hover:bg-white/10 hover:text-white transition-colors"
           title="Import JSON"
@@ -125,6 +129,7 @@ export function CanvasTopBar({ workflowId, onToggleHistory }: Props) {
 
         {/* Export */}
         <button
+          type="button"
           onClick={exportJson}
           className="p-2 rounded-md text-zinc-400 hover:bg-white/10 hover:text-white transition-colors"
           title="Export JSON"
@@ -134,6 +139,7 @@ export function CanvasTopBar({ workflowId, onToggleHistory }: Props) {
 
         {/* History */}
         <button
+          type="button"
           onClick={onToggleHistory}
           className="p-2 rounded-md text-zinc-400 hover:bg-white/10 hover:text-white transition-colors"
           title="Execution History"
@@ -144,8 +150,22 @@ export function CanvasTopBar({ workflowId, onToggleHistory }: Props) {
         {/* Theme toggle */}
         <ThemeToggle />
 
-        {/* Run button — Magica style: bigger, purple, icon */}
+        {/* Stop button — shown only while running */}
+        {running && (
+          <button
+            type="button"
+            onClick={cancelRun}
+            className="ml-1 inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-red-600/90 text-white text-sm font-semibold hover:bg-red-700 transition-all shadow-sm active:scale-95"
+            title="Stop run"
+          >
+            <Square size={13} fill="currentColor" />
+            <span className="hidden md:inline">Stop</span>
+          </button>
+        )}
+
+        {/* Run button */}
         <button
+          type="button"
           onClick={handleRun}
           disabled={running}
           className="ml-1 inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-purple-600 text-white text-sm font-semibold hover:bg-purple-700 disabled:opacity-60 transition-all shadow-sm hover:shadow-md active:scale-95"
