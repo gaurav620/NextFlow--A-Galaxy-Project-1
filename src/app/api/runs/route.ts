@@ -3,6 +3,7 @@ import { auth } from "@clerk/nextjs/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { WorkflowGraphSchema } from "@/lib/types";
+import { executeWorkflow } from "@/lib/execute";
 
 export const dynamic = "force-dynamic";
 
@@ -60,25 +61,43 @@ export async function POST(req: Request) {
       },
     });
 
-    // Trigger the workflow orchestrator task asynchronously on Trigger.dev
-    try {
-      const { workflowOrchestratorTask } = await import("@/trigger/workflow-orchestrator");
-      const handle = await workflowOrchestratorTask.trigger({
+    // Trigger the workflow execution
+    if (process.env.TRIGGER_DEV_ENABLED !== "true") {
+      console.log(`[runs/route] Local mode detected: executing workflow in-process for runId=${run.id}`);
+      // Asynchronous in-process execution for local dev (keeps local dev extremely reliable)
+      executeWorkflow({
         runId: run.id,
         workflowId,
         graph: graph as any,
         scope,
         targetNodeIds,
+        onEvent: (evt) => {
+          console.log(`[runs/route] In-process event: [${evt.type}] nodeId=${evt.nodeId ?? "N/A"}`);
+        },
+      }).catch((err) => {
+        console.error(`[runs/route] In-process execution failed for runId=${run.id}:`, err);
       });
-      console.log(`[runs/route] Triggered workflow-orchestrator task runId=${run.id} handleId=${handle.id}`);
-    } catch (triggerErr) {
-      console.error(`[runs/route] Failed to trigger workflow-orchestrator task for runId=${run.id}:`, triggerErr);
-      // Update database status of the Run so it doesn't hang in "running" if trigger fails
-      await prisma.run.update({
-        where: { id: run.id },
-        data: { status: "error", finishedAt: new Date() },
-      }).catch((dbErr) => console.error("[runs/route] Failed to update Run status on trigger failure:", dbErr));
-      return NextResponse.json({ error: "failed_to_trigger", message: String(triggerErr) }, { status: 500 });
+    } else {
+      // Trigger the workflow orchestrator task asynchronously on Trigger.dev
+      try {
+        const { workflowOrchestratorTask } = await import("@/trigger/workflow-orchestrator");
+        const handle = await workflowOrchestratorTask.trigger({
+          runId: run.id,
+          workflowId,
+          graph: graph as any,
+          scope,
+          targetNodeIds,
+        });
+        console.log(`[runs/route] Triggered workflow-orchestrator task runId=${run.id} handleId=${handle.id}`);
+      } catch (triggerErr) {
+        console.error(`[runs/route] Failed to trigger workflow-orchestrator task for runId=${run.id}:`, triggerErr);
+        // Update database status of the Run so it doesn't hang in "running" if trigger fails
+        await prisma.run.update({
+          where: { id: run.id },
+          data: { status: "error", finishedAt: new Date() },
+        }).catch((dbErr) => console.error("[runs/route] Failed to update Run status on trigger failure:", dbErr));
+        return NextResponse.json({ error: "failed_to_trigger", message: String(triggerErr) }, { status: 500 });
+      }
     }
 
     return NextResponse.json({ runId: run.id });
