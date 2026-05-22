@@ -28,6 +28,8 @@ export function useRun(workflowId: string) {
   const setRunningIds = useCanvas((s) => s.setRunning);
   const markRunning = useCanvas((s) => s.markRunning);
   const updateNodeData = useCanvas((s) => s.updateNodeData);
+  const setNodeState = useCanvas((s) => s.setNodeState);
+  const resetNodeStates = useCanvas((s) => s.resetNodeStates);
 
   const applyNodeResult = useCallback(
     (nodeId: string, nodeType: string, output: unknown) => {
@@ -46,16 +48,12 @@ export function useRun(workflowId: string) {
   );
 
   const run = useCallback(
-    async (scope: Scope = "full", targetNodeId?: string) => {
+    async (scope: Scope = "full", targetNodeIds?: string[]) => {
       if (isRunning) return;
       if (!workflowId) return;
 
-      const targetNodeIds: string[] | undefined =
-        targetNodeId ? [targetNodeId]
-        : scope === "full" ? undefined
-        : undefined;
-
       setIsRunning(true);
+      resetNodeStates();
 
       const clientRunId = `run_${Math.random().toString(36).slice(2, 11)}`;
       let es: EventSource | null = null;
@@ -82,16 +80,18 @@ export function useRun(workflowId: string) {
           
           for (const nr of data.run.nodeRuns) {
             if (nr.status === "running") {
-              markRunning(nr.nodeId, true);
+              setNodeState(nr.nodeId, "running");
             } else if (nr.status === "success") {
-              markRunning(nr.nodeId, false);
+              setNodeState(nr.nodeId, "success");
               applyNodeResult(nr.nodeId, nr.nodeType, nr.output);
-            } else if (nr.status === "error") {
-              markRunning(nr.nodeId, false);
+            } else if (nr.status === "error" || nr.status === "failed") {
+              setNodeState(nr.nodeId, "failed");
+            } else if (nr.status === "pending") {
+              setNodeState(nr.nodeId, "queued");
             }
           }
 
-          if (data.run.status !== "running") {
+          if (data.run.status !== "running" && data.run.status !== "pending") {
             cleanup();
           }
         } catch (err) {
@@ -105,13 +105,15 @@ export function useRun(workflowId: string) {
         es.onmessage = (event) => {
           try {
             const data = JSON.parse(event.data);
-            if (data.type === "node-start" && data.nodeId) {
-              markRunning(data.nodeId, true);
+            if (data.type === "node-queued" && data.nodeId) {
+              setNodeState(data.nodeId, "queued");
+            } else if (data.type === "node-start" && data.nodeId) {
+              setNodeState(data.nodeId, "running");
             } else if (data.type === "node-finish" && data.nodeId) {
-              markRunning(data.nodeId, false);
+              setNodeState(data.nodeId, "success");
               applyNodeResult(data.nodeId, data.nodeType, data.output);
             } else if (data.type === "node-error" && data.nodeId) {
-              markRunning(data.nodeId, false);
+              setNodeState(data.nodeId, "failed");
             } else if (data.type === "run-finish") {
               cleanup();
             }
@@ -129,7 +131,7 @@ export function useRun(workflowId: string) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             workflowId,
-            scope: targetNodeIds ? "partial" : "full",
+            scope,
             targetNodeIds,
             runId: clientRunId,
           }),
@@ -149,7 +151,7 @@ export function useRun(workflowId: string) {
         cleanup();
       }
     },
-    [workflowId, isRunning, setIsRunning, setRunningIds, markRunning, applyNodeResult]
+    [workflowId, isRunning, setIsRunning, setRunningIds, setNodeState, resetNodeStates, applyNodeResult]
   );
 
   return { running: isRunning, run };

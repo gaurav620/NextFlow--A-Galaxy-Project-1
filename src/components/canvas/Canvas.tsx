@@ -21,7 +21,6 @@ import { GeminiNode } from "@/components/nodes/GeminiNode";
 import { ResponseNode } from "@/components/nodes/ResponseNode";
 import { CanvasTopBar } from "@/components/canvas/CanvasTopBar";
 import { CanvasBottomBar } from "@/components/canvas/CanvasBottomBar";
-import { CanvasSidebar } from "@/components/canvas/CanvasSidebar";
 import { HistoryPanel } from "@/components/history/HistoryPanel";
 import { useRun } from "@/lib/use-run";
 
@@ -71,14 +70,16 @@ function CanvasInner({ workflowId, name: initialName, graph }: Props) {
 
   const [showMinimap, setShowMinimap] = useState(true);
   const [showHistory, setShowHistory] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   // Listen for run requests from individual node Run buttons
   useEffect(() => {
     if (!runRequest) return;
     clearRunRequest();
-    // 'full' means run all, otherwise it's a nodeId for partial run
-    run(runRequest === "full" ? "full" : "full"); // always full for now
+    if (runRequest === "full") {
+      run("full");
+    } else {
+      run("single", [runRequest]);
+    }
   }, [runRequest, clearRunRequest, run]);
 
   useEffect(() => {
@@ -206,13 +207,7 @@ function CanvasInner({ workflowId, name: initialName, graph }: Props) {
 
   return (
     // Full screen: flex row (sidebar + main)
-    <div className="flex h-screen w-screen overflow-hidden bg-[#f7f7f8]">
-      {/* Left sidebar */}
-      <CanvasSidebar
-        collapsed={sidebarCollapsed}
-        onToggle={() => setSidebarCollapsed((v) => !v)}
-      />
-
+    <div className="flex h-screen w-screen overflow-hidden bg-background">
       {/* Main column: top bar + canvas */}
       <div className="flex flex-col flex-1 min-w-0">
         <CanvasTopBar
@@ -237,26 +232,26 @@ function CanvasInner({ workflowId, name: initialName, graph }: Props) {
             deleteKeyCode={["Backspace", "Delete"]}
             proOptions={{ hideAttribution: true }}
             defaultEdgeOptions={{ animated: true, style: { strokeWidth: 2 } }}
-            connectionLineStyle={{ stroke: "#7c3aed", strokeWidth: 2, strokeDasharray: "5 5" }}
+            connectionLineStyle={{ stroke: "#a855f7", strokeWidth: 2, strokeDasharray: "5 5" }}
           >
             <Background
               variant={BackgroundVariant.Dots}
               gap={24}
               size={1.2}
-              color="#d1d5db"
+              color="#27272a"
             />
             <Controls
               position="bottom-left"
               showInteractive={false}
-              style={{ boxShadow: "none", border: "1px solid #e5e7eb", borderRadius: 8, background: "white" }}
+              style={{ border: "none", boxShadow: "none" }}
             />
             {showMinimap && (
               <MiniMap
                 position="bottom-right"
                 pannable
                 zoomable
-                maskColor="rgba(244,244,245,0.7)"
-                style={{ borderRadius: 10, border: "1px solid #e4e4e7", marginBottom: 60 }}
+                maskColor="rgba(168, 85, 247, 0.08)"
+                style={{ borderRadius: 10, marginBottom: 60 }}
               />
             )}
           </ReactFlow>

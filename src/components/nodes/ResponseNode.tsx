@@ -49,11 +49,11 @@ export function ResponseNode({ id, data }: NodeProps) {
     });
 
   return (
-    <NodeShell id={id} title="Response" closable={false} width={280} icon={<MessageSquare size={12} className="text-blue-500" />}>
-      <div className="space-y-1.5">
+    <NodeShell id={id} title="Response" closable={false} width={280} icon={<MessageSquare size={12} className="text-purple-400" />}>
+      <div className="space-y-2">
         {/* Labeled connected input rows */}
         {connectedSources.map((src, idx) => (
-          <div key={src.edgeId} className="relative flex items-center gap-2 py-1">
+          <div key={src.edgeId} className="relative flex items-center gap-2 py-0.5">
             {/* Handle on left side */}
             <TypedHandle
               type="text"
@@ -61,17 +61,17 @@ export function ResponseNode({ id, data }: NodeProps) {
               id={src.targetHandle ?? `result_${idx}`}
               top={28 + idx * 36}
             />
-            <div className="flex-1 bg-neutral-50 rounded border border-neutral-100 px-2 py-1.5 min-w-0">
+            <div className="flex-1 bg-zinc-900/50 rounded-lg border border-white/5 px-2.5 py-1.5 min-w-0">
               <div className="flex items-center justify-between gap-2 min-w-0">
-                <span className="text-[11px] font-medium text-neutral-600 truncate flex-1">
+                <span className="text-[11px] font-semibold text-zinc-300 truncate flex-1">
                   {src.label}
                 </span>
                 {src.outputVal ? (
-                  <span className="text-[10px] text-neutral-500 truncate max-w-[120px]" title={src.outputVal}>
+                  <span className="text-[10px] text-zinc-400 truncate max-w-[120px] font-medium" title={src.outputVal}>
                     {src.outputVal.startsWith("http") ? "🖼️ Image" : src.outputVal}
                   </span>
                 ) : (
-                  <span className="text-[10px] text-neutral-300 italic shrink-0">
+                  <span className="text-[10px] text-zinc-600 italic shrink-0">
                     No output yet
                   </span>
                 )}
@@ -81,15 +81,15 @@ export function ResponseNode({ id, data }: NodeProps) {
         ))}
 
         {/* Always show a default input/drop handle at the bottom for dragging new connections */}
-        <div className="relative flex items-center gap-2 py-1">
+        <div className="relative flex items-center gap-2 py-0.5">
           <TypedHandle
             type="text"
             side="left"
             id="result"
             top={28 + connectedSources.length * 36}
           />
-          <div className="flex-1 bg-neutral-50/50 rounded border border-dashed border-neutral-200 px-2 py-1.5">
-            <span className="text-[11px] text-neutral-400 italic">Connect new input...</span>
+          <div className="flex-1 bg-zinc-950/40 rounded-lg border border-dashed border-white/10 px-2.5 py-1.5">
+            <span className="text-[11px] text-zinc-500 italic">Connect new input...</span>
           </div>
         </div>
 
@@ -98,22 +98,22 @@ export function ResponseNode({ id, data }: NodeProps) {
           className={cn(
             "mt-1 p-3 rounded-lg text-[11px] min-h-[64px] transition-all duration-300",
             isRunning
-              ? "bg-purple-50 border border-purple-200 text-purple-700"
+              ? "bg-purple-500/10 border border-purple-500/20 text-purple-300"
               : d.result
-              ? "bg-gradient-to-br from-emerald-50 to-white border border-emerald-200 text-neutral-700"
-              : "bg-neutral-50 border border-neutral-200 text-neutral-400"
+              ? "bg-gradient-to-br from-emerald-500/5 to-zinc-900/20 border border-emerald-500/20 text-zinc-200"
+              : "bg-zinc-950/40 border border-white/5 text-zinc-500"
           )}
         >
           {isRunning ? (
             <div className="flex items-center gap-2">
-              <Loader2 size={12} className="animate-spin text-purple-500" />
-              <span className="italic text-purple-500">Running…</span>
+              <Loader2 size={12} className="animate-spin text-purple-400" />
+              <span className="italic text-purple-400 font-medium">Running…</span>
             </div>
           ) : d.result ? (
             <div className="space-y-1.5">
-              <div className="flex items-center gap-1.5 text-emerald-600 mb-2">
+              <div className="flex items-center gap-1.5 text-emerald-400 mb-2">
                 <CheckCircle2 size={12} />
-                <span className="text-[10px] font-semibold uppercase tracking-wide">Output</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider">Output</span>
               </div>
               {d.result.startsWith("http") && (d.result.includes("placehold") || d.result.includes("transloadit") || d.result.includes("cloudinary") || d.result.includes("amazon") || d.result.includes("uppy")) ? (
                 <div className="mt-1">
@@ -121,11 +121,11 @@ export function ResponseNode({ id, data }: NodeProps) {
                   <img
                     src={d.result}
                     alt="Response output image"
-                    className="w-full h-32 object-cover rounded-md border border-neutral-200"
+                    className="w-full h-32 object-cover rounded-lg border border-white/10"
                   />
                 </div>
               ) : (
-                <p className="whitespace-pre-wrap leading-relaxed text-neutral-700">{d.result}</p>
+                <p className="whitespace-pre-wrap leading-relaxed text-zinc-300">{d.result}</p>
               )}
             </div>
           ) : (

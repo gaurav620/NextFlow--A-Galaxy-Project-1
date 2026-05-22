@@ -26,8 +26,8 @@ export function TypedHandle({
         background: HANDLE_COLORS[type],
         width: 10,
         height: 10,
-        border: "2px solid white",
-        boxShadow: "0 0 0 1px rgba(0,0,0,.08)",
+        border: "2px solid #121218",
+        boxShadow: "0 0 0 1px rgba(255,255,255,0.05)",
         top,
       }}
     />
@@ -37,10 +37,9 @@ export function TypedHandle({
 /**
  * Functional "Run" button that appears in each node header.
  * Clicking it dispatches a run request via the canvas store,
- * which Canvas.tsx picks up and calls useRun.run("full").
- * Exported so custom badge props (e.g. GeminiNode) can use it.
+ * which Canvas.tsx picks up and calls useRun.run("single", [nodeId]).
  */
-export function NodeRunButton() {
+export function NodeRunButton({ nodeId }: { nodeId?: string } = {}) {
   const isRunning = useCanvas((s) => s.isRunning);
   const requestRun = useCanvas((s) => s.requestRun);
 
@@ -48,24 +47,60 @@ export function NodeRunButton() {
     <button
       onClick={(e) => {
         e.stopPropagation();
-        requestRun();
+        requestRun(nodeId);
       }}
       disabled={isRunning}
-      title={isRunning ? "Workflow is running…" : "Run workflow"}
+      title={isRunning ? "Workflow is running…" : "Run workflow/node"}
       className={cn(
-        "inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded font-medium transition-all",
+        "inline-flex items-center gap-1.5 text-[11px] px-2 py-0.5 rounded-md font-semibold transition-all",
         isRunning
-          ? "bg-neutral-100 text-neutral-400 cursor-not-allowed"
-          : "bg-emerald-50 text-emerald-700 hover:bg-emerald-100 active:scale-95"
+          ? "bg-white/5 text-zinc-500 cursor-not-allowed"
+          : "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 active:scale-95"
       )}
     >
       {isRunning ? (
-        <Loader2 size={9} className="animate-spin" />
+        <Loader2 size={9} className="animate-spin text-zinc-500" />
       ) : (
         <Play size={9} fill="currentColor" />
       )}
       {isRunning ? "Running…" : "Run"}
     </button>
+  );
+}
+
+function NodeStateBadge({ state }: { state: 'idle' | 'queued' | 'running' | 'success' | 'failed' }) {
+  if (state === 'idle') return null;
+  
+  let label = '';
+  let classes = '';
+  
+  switch (state) {
+    case 'queued':
+      label = 'Queued';
+      classes = 'bg-amber-500/10 text-amber-400 border-amber-500/20';
+      break;
+    case 'running':
+      label = 'Running';
+      classes = 'bg-purple-500/10 text-purple-400 border-purple-500/20';
+      break;
+    case 'success':
+      label = 'Success';
+      classes = 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
+      break;
+    case 'failed':
+      label = 'Failed';
+      classes = 'bg-red-500/10 text-red-400 border-red-500/20';
+      break;
+  }
+  
+  return (
+    <span className={cn(
+      "inline-flex items-center text-[10px] px-2 py-0.5 rounded-full border font-semibold select-none shrink-0 ml-1.5",
+      classes
+    )}>
+      {state === 'running' && <Loader2 size={8} className="animate-spin mr-1 text-purple-400" />}
+      {label}
+    </span>
   );
 }
 
@@ -88,27 +123,31 @@ export function NodeShell({
   children: React.ReactNode;
   width?: number;
 }) {
-  const isRunning = useCanvas((s) => s.runningNodeIds.has(id)) || running;
+  const dbState = useCanvas((s) => s.nodeStates[id] || "idle");
+  const nodeState = running ? "running" : dbState;
   const onNodesChange = useCanvas((s) => s.onNodesChange);
   return (
     <div
       className={cn(
-        "nf-card relative",
-        isRunning && "nf-running"
+        "nf-card relative text-left",
+        nodeState === "running" && "nf-running",
+        nodeState === "queued" && "nf-queued",
+        nodeState === "success" && "nf-success",
+        nodeState === "failed" && "nf-error"
       )}
       style={{ width }}
     >
-      <div className="flex items-center justify-between px-3 py-2 border-b border-neutral-100">
-        <div className="flex items-center gap-1.5 text-[13px] font-semibold text-neutral-800 min-w-0">
+      <div className="flex items-center justify-between px-3 py-2 border-b border-white/5">
+        <div className="flex items-center gap-1.5 text-[13px] font-bold text-zinc-100 min-w-0 pr-2">
           {icon && <span className="shrink-0">{icon}</span>}
           <span className="truncate">{title}</span>
+          <NodeStateBadge state={nodeState} />
         </div>
-        <div className="flex items-center gap-1.5 shrink-0 ml-2">
-          {/* badge can be custom (e.g. Gemini model selector + run); fallback to the functional NodeRunButton */}
-          {badge ?? <NodeRunButton />}
+        <div className="flex items-center gap-1.5 shrink-0 ml-auto">
+          {badge !== undefined ? badge : <NodeRunButton nodeId={id} />}
           {closable && (
             <button
-              className="p-0.5 rounded hover:bg-red-50 hover:text-red-500 text-neutral-400 transition-colors"
+              className="p-1 rounded-md hover:bg-red-500/15 hover:text-red-400 text-zinc-500 transition-colors"
               onClick={() =>
                 onNodesChange([{ id, type: "remove" }])
               }
@@ -119,7 +158,7 @@ export function NodeShell({
           )}
         </div>
       </div>
-      <div className="p-3 text-[12px] text-neutral-700">{children}</div>
+      <div className="p-3 text-[12px] text-zinc-300">{children}</div>
     </div>
   );
 }
@@ -145,7 +184,7 @@ export function FieldRow({
       <div className="flex items-center justify-between gap-2 px-1">
         <span
           className={cn(
-            "text-[12px] font-medium text-neutral-700 flex items-center gap-1.5",
+            "text-[12px] font-medium text-zinc-300 flex items-center gap-1.5",
             side === "right" && "ml-auto"
           )}
         >

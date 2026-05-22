@@ -1,7 +1,7 @@
 "use client";
 
 import type { NodeProps } from "@xyflow/react";
-import { Loader2, Scissors } from "lucide-react";
+import { Loader2, Crop } from "lucide-react";
 import { useCanvas } from "@/stores/canvas";
 import { NodeShell, FieldRow } from "./shared";
 import type { CropImageData } from "@/lib/types";
@@ -24,9 +24,9 @@ export function CropImageNode({ id, data }: NodeProps) {
     <NodeShell
       id={id}
       title="Crop Image"
-      icon={<Scissors size={12} className="text-orange-500" />}
+      icon={<Crop size={12} className="text-amber-400" />}
     >
-      <div className="space-y-1">
+      <div className="space-y-1.5">
         {/* Input image handle */}
         <FieldRow
           label="Input Image"
@@ -35,7 +35,7 @@ export function CropImageNode({ id, data }: NodeProps) {
           handleId="Input Image"
           connected={isConnected("Input Image")}
         >
-          <span className="text-[11px] text-neutral-400 ml-2 truncate italic">
+          <span className="text-[11px] text-zinc-500 ml-1.5 italic">
             {isConnected("Input Image") ? "Connected ✓" : "Connect image output"}
           </span>
         </FieldRow>
@@ -43,6 +43,7 @@ export function CropImageNode({ id, data }: NodeProps) {
         {/* X/Y/W/H sliders */}
         {(["x", "y", "w", "h"] as const).map((key) => {
           const labelMap = { x: "X Position (%)", y: "Y Position (%)", w: "Width (%)", h: "Height (%)" };
+          const connected = isConnected(labelMap[key]);
           return (
             <FieldRow
               key={key}
@@ -50,19 +51,19 @@ export function CropImageNode({ id, data }: NodeProps) {
               type="text"
               side="left"
               handleId={labelMap[key]}
-              connected={isConnected(labelMap[key])}
+              connected={connected}
             >
-              <div className="flex items-center gap-1.5 ml-2">
+              <div className="flex items-center gap-2 ml-1.5">
                 <input
                   type="range"
                   min={0}
                   max={100}
                   value={d[key] ?? 0}
                   onChange={onSlider(key)}
-                  disabled={isConnected(labelMap[key])}
-                  className="flex-1 accent-orange-500 disabled:opacity-50"
+                  disabled={connected}
+                  className="flex-1 accent-amber-500 disabled:opacity-30 cursor-pointer"
                 />
-                <span className="text-[11px] tabular-nums text-neutral-500 w-8 text-right font-medium">
+                <span className="text-[11px] tabular-nums text-zinc-400 w-8 text-right font-semibold">
                   {d[key] ?? 0}
                 </span>
               </div>
@@ -71,27 +72,27 @@ export function CropImageNode({ id, data }: NodeProps) {
         })}
 
         {/* Output */}
-        <div className="mt-2 border-t border-neutral-100 pt-2 relative">
+        <div className="mt-2 border-t border-white/5 pt-2 relative">
           <FieldRow label="Output Image" type="image" side="right" handleId="Output Image" />
 
           {/* Running state */}
           {isRunning && (
-            <div className="mt-2 flex items-center gap-2 text-[11px] text-orange-600 bg-orange-50 rounded p-2">
-              <Loader2 size={11} className="animate-spin" />
+            <div className="mt-2 flex items-center gap-2 text-[11px] text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-lg p-2.5">
+              <Loader2 size={11} className="animate-spin text-amber-400" />
               <span className="italic">Processing image…</span>
             </div>
           )}
 
           {/* Output preview */}
           {!isRunning && d.outputImageUrl && (
-            <div className="mt-2">
+            <div className="mt-2" style={{ animation: "fadeIn 0.3s ease-out" }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={d.outputImageUrl}
                 alt="Crop output"
-                className="w-full h-24 object-cover rounded-md border border-neutral-200"
+                className="w-full h-24 object-cover rounded-lg border border-white/10"
               />
-              <p className="text-[10px] text-neutral-400 mt-1 truncate" title={d.outputImageUrl}>
+              <p className="text-[10px] text-zinc-500 mt-1 truncate" title={d.outputImageUrl}>
                 {d.outputImageUrl.slice(0, 50)}…
               </p>
             </div>
@@ -99,8 +100,8 @@ export function CropImageNode({ id, data }: NodeProps) {
 
           {/* Empty state */}
           {!isRunning && !d.outputImageUrl && (
-            <div className="mt-2 h-16 rounded-md border border-dashed border-neutral-200 flex items-center justify-center">
-              <span className="text-[11px] text-neutral-300 italic">Output will appear here</span>
+            <div className="mt-2 h-16 rounded-lg border border-dashed border-white/10 bg-zinc-950/40 flex items-center justify-center">
+              <span className="text-[10px] text-zinc-500 italic">Output will appear here</span>
             </div>
           )}
         </div>

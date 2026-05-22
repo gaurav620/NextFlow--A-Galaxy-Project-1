@@ -1,13 +1,14 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f7f7f8;
-  --foreground: #18181b;
-  --border: #e4e4e7;
-  --muted: #71717a;
-  --accent: #7c3aed;
+  --background: #08080a;
+  --foreground: #f4f4f5;
+  --border: rgba(255, 255, 255, 0.08);
+  --muted: #8e8e9f;
+  --accent: #a855f7;
   --accent-amber: #f59e0b;
   --accent-blue: #3b82f6;
+  color-scheme: dark;
 }
 
 @theme inline {
@@ -19,76 +20,110 @@
   --font-sans: var(--font-sans);
 }
 
-html, body { height: 100%; }
-body {
-  background: var(--background);
+html, body { 
+  height: 100%; 
+  background-color: var(--background);
   color: var(--foreground);
+}
+
+body {
   font-family: var(--font-sans), Inter, system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
-/* ─── React Flow ─────────────────────────────────────────── */
+/* ─── React Flow Canvas ──────────────────────────────────── */
 .react-flow__background {
-  background-color: #f7f7f8;
+  background-color: #08080a !important;
 }
 
 .react-flow__edge-path {
-  stroke-width: 2;
+  stroke: #a855f7 !important;
+  stroke-width: 2px !important;
+  transition: stroke 0.3s, stroke-width 0.3s;
 }
 
-/* Edge animation (dashes flow along edge) */
+.react-flow__connection-path {
+  stroke: #a855f7 !important;
+  stroke-width: 2px !important;
+  stroke-dasharray: 5 5;
+}
+
+/* Edge flow animation */
 .react-flow__edge.animated .react-flow__edge-path {
-  stroke-dasharray: 5;
-  animation: dashdraw 0.5s linear infinite;
+  stroke: #c084fc !important;
+  stroke-dasharray: 6;
+  animation: dashdraw 0.5s linear infinite !important;
+  filter: drop-shadow(0 0 3px rgba(168, 85, 247, 0.4));
 }
+
 @keyframes dashdraw {
-  from { stroke-dashoffset: 10; }
+  from { stroke-dashoffset: 12; }
 }
 
-/* ─── Node card ────────────────────────────────────────────── */
+/* ─── Premium Glassmorphism Node Card ─────────────────────── */
 .nf-card {
-  background: white;
-  border: 1px solid #e9e9eb;
-  border-radius: 12px;
-  box-shadow: 0 1px 3px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.04);
-  transition: box-shadow 0.15s;
+  background: rgba(18, 18, 24, 0.75) !important;
+  backdrop-filter: blur(16px) saturate(120%);
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 14px !important;
+  box-shadow: 
+    0 4px 30px rgba(0, 0, 0, 0.4), 
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.05) !important;
+  transition: border-color 0.25s, box-shadow 0.25s, transform 0.25s;
 }
+
 .nf-card:hover {
-  box-shadow: 0 2px 6px rgba(0,0,0,.06), 0 8px 24px rgba(0,0,0,.06);
+  border-color: rgba(168, 85, 247, 0.35) !important;
+  box-shadow: 
+    0 12px 40px rgba(0, 0, 0, 0.6), 
+    0 0 20px rgba(168, 85, 247, 0.1) !important;
+  transform: translateY(-1px);
 }
 
-/* Node error state */
+/* Node state colors overrides */
 .nf-error {
-  border-color: #fca5a5 !important;
-  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.15) !important;
+  border-color: rgba(239, 68, 68, 0.4) !important;
+  box-shadow: 0 0 20px rgba(239, 68, 68, 0.15) !important;
 }
 
-/* ─── Running / Pulsating glow ──────────────────────────────── */
+.nf-queued {
+  border-color: rgba(245, 158, 11, 0.4) !important;
+  box-shadow: 0 0 20px rgba(245, 158, 11, 0.15) !important;
+}
+
+.nf-success {
+  border-color: rgba(16, 185, 129, 0.4) !important;
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.15) !important;
+}
+
+/* ─── Running Node Pulsating Glow ─────────────────────────── */
 @keyframes nf-pulse {
   0%, 100% {
     box-shadow:
-      0 0 0 0 rgba(124, 58, 237, 0.55),
-      0 0 30px 0 rgba(124, 58, 237, 0.45);
+      0 0 0 1px rgba(168, 85, 247, 0.5),
+      0 0 25px 0 rgba(168, 85, 247, 0.25);
+    border-color: rgba(168, 85, 247, 0.6) !important;
   }
   50% {
     box-shadow:
-      0 0 0 8px rgba(124, 58, 237, 0),
-      0 0 50px 6px rgba(124, 58, 237, 0.35);
+      0 0 0 4px rgba(168, 85, 247, 0.15),
+      0 0 40px 4px rgba(168, 85, 247, 0.5);
+    border-color: rgba(168, 85, 247, 0.9) !important;
   }
 }
+
 .nf-running {
-  animation: nf-pulse 1.4s ease-in-out infinite;
-  border-color: rgba(124, 58, 237, 0.4) !important;
+  animation: nf-pulse 1.6s ease-in-out infinite !important;
 }
 
-/* ─── Animations ────────────────────────────────────────────── */
+/* ─── Animations ─────────────────────────────────────────── */
 @keyframes slideUp {
   from { opacity: 0; transform: translateY(10px) scale(0.97); }
   to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 @keyframes scaleIn {
-  from { opacity: 0; transform: scale(0.95); }
+  from { opacity: 0; transform: scale(0.96); }
   to   { opacity: 1; transform: scale(1); }
 }
 
@@ -102,34 +137,79 @@ body {
   to   { opacity: 1; }
 }
 
-/* ─── React Flow controls ───────────────────────────────────── */
+.animate-fade-in {
+  animation: fadeIn 0.2s ease-out forwards;
+}
+
+/* ─── React Flow Controls & Minimap ──────────────────────── */
 .react-flow__controls {
-  box-shadow: none !important;
-  border: 1px solid #e4e4e7 !important;
-  border-radius: 8px !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 10px !important;
   overflow: hidden;
+  background: rgba(15, 15, 20, 0.8) !important;
+  backdrop-filter: blur(12px);
 }
+
 .react-flow__controls-button {
-  border-bottom: 1px solid #f0f0f0 !important;
-  background: white !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+  background: transparent !important;
+  color: #a1a1aa !important;
+  fill: #a1a1aa !important;
+  transition: background 0.15s, color 0.15s;
 }
+
 .react-flow__controls-button:hover {
-  background: #f9f9fb !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: #f4f4f5 !important;
 }
+
+.react-flow__controls-button svg {
+  fill: currentColor !important;
+}
+
 .react-flow__controls-button:last-child {
   border-bottom: none !important;
 }
 
-/* ─── Scrollbar ─────────────────────────────────────────────── */
-::-webkit-scrollbar { width: 5px; height: 5px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #d4d4d8; border-radius: 99px; }
-::-webkit-scrollbar-thumb:hover { background: #a1a1aa; }
-
-/* ─── Uppy Dashboard overrides ──────────────────────────────── */
-.uppy-Dashboard-inner {
-  border-radius: 8px !important;
+.react-flow__minimap {
+  background-color: rgba(10, 10, 12, 0.8) !important;
+  backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5) !important;
 }
+
+/* ─── Scrollbar ──────────────────────────────────────────── */
+::-webkit-scrollbar { 
+  width: 6px; 
+  height: 6px; 
+}
+::-webkit-scrollbar-track { 
+  background: transparent; 
+}
+::-webkit-scrollbar-thumb { 
+  background: rgba(255, 255, 255, 0.15); 
+  border-radius: 99px; 
+}
+::-webkit-scrollbar-thumb:hover { 
+  background: rgba(255, 255, 255, 0.3); 
+}
+
+/* ─── Uppy overrides ─────────────────────────────────────── */
+.uppy-Dashboard-inner {
+  background-color: #0e0e11 !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
 .uppy-Dashboard-AddFiles-title {
-  font-size: 14px !important;
+  color: #f4f4f5 !important;
+}
+
+.uppy-Dashboard-browse {
+  color: #a855f7 !important;
+}
+
+.uppy-DashboardContent-bar {
+  background-color: #121216 !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
 }

@@ -50,9 +50,15 @@ export function buildExecGraph(
     const id = ready.shift()!;
     out.push(id);
     for (const t of adj[id] ?? []) {
-      indeg[t] -= 1;
-      if (indeg[t] === 0) ready.push(t);
+      if (indeg[t] !== undefined) {
+        indeg[t] -= 1;
+        if (indeg[t] === 0) ready.push(t);
+      }
     }
+  }
+
+  if (out.length < Object.keys(nodes).length) {
+    throw new Error("Cycle detected in workflow graph. Execution aborted.");
   }
 
   // Restrict to scope

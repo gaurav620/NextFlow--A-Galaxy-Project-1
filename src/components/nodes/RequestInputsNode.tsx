@@ -34,7 +34,7 @@ export function RequestInputsNode({ id, data }: NodeProps) {
     } as Partial<RequestInputsData>);
 
   return (
-    <NodeShell id={id} title="Request Inputs" icon={<FormInput size={12} className="text-blue-500" />} closable={false}>
+    <NodeShell id={id} title="Request Inputs" icon={<FormInput size={12} className="text-blue-400" />} closable={false}>
       <div className="space-y-2">
         {d.fields.map((f, idx) => (
           <FieldEditor
@@ -49,23 +49,23 @@ export function RequestInputsNode({ id, data }: NodeProps) {
         <div className="relative">
           <button
             onClick={() => setPickerOpen((v) => !v)}
-            className="w-full mt-1 inline-flex items-center justify-center gap-1.5 py-1.5 rounded-md border border-dashed border-neutral-300 text-xs text-neutral-600 hover:bg-neutral-50"
+            className="w-full mt-1 inline-flex items-center justify-center gap-1.5 py-1.5 rounded-lg border border-dashed border-white/10 text-xs text-zinc-400 hover:text-zinc-200 hover:bg-white/5 transition-all duration-150 bg-transparent"
           >
             <Plus size={12} /> Add field
           </button>
           {pickerOpen && (
-            <div className="absolute left-0 right-0 top-full mt-1 nf-card p-1 z-10">
+            <div className="absolute left-0 right-0 top-full mt-1 bg-zinc-950/95 border border-white/10 rounded-xl shadow-2xl backdrop-blur-md p-1 z-10" style={{ animation: "scaleIn 0.1s ease-out" }}>
               <button
                 onClick={() => addField("text_field")}
-                className="w-full flex items-center gap-2 p-2 rounded-md hover:bg-neutral-50 text-xs"
+                className="w-full flex items-center gap-2 p-2 rounded-lg hover:bg-white/5 text-xs text-zinc-300 hover:text-white transition-colors"
               >
-                <Type size={12} /> text_field
+                <Type size={12} className="text-zinc-400" /> text_field
               </button>
               <button
                 onClick={() => addField("image_field")}
-                className="w-full flex items-center gap-2 p-2 rounded-md hover:bg-neutral-50 text-xs"
+                className="w-full flex items-center gap-2 p-2 rounded-lg hover:bg-white/5 text-xs text-zinc-300 hover:text-white transition-colors"
               >
-                <ImagePlus size={12} /> image_field
+                <ImagePlus size={12} className="text-zinc-400" /> image_field
               </button>
             </div>
           )}
@@ -88,17 +88,18 @@ function FieldEditor({
 }) {
   const handleType = field.kind === "image_field" ? "image" : "text";
   return (
-    <div className="rounded-md border border-neutral-200 p-2 space-y-1 relative">
+    <div className="rounded-lg border border-white/5 bg-zinc-900/40 p-2.5 space-y-1.5 relative">
       <TypedHandle type={handleType} side="right" id={field.key} top={top} />
-      <div className="flex items-center justify-between gap-1">
+      <div className="flex items-center justify-between gap-2">
         <input
           value={field.label}
           onChange={(e) => onChange({ label: e.target.value })}
-          className="text-xs font-medium bg-transparent outline-none focus:bg-neutral-50 rounded px-1 flex-1 min-w-0"
+          className="text-xs font-semibold bg-transparent outline-none focus:bg-white/5 rounded-md px-1.5 py-0.5 flex-1 min-w-0 text-zinc-200 focus:text-white border border-transparent focus:border-white/10 transition-all"
         />
         <button
           onClick={onRemove}
-          className="p-0.5 rounded hover:bg-red-50 hover:text-red-600 text-neutral-400"
+          className="p-1 rounded-md hover:bg-red-500/15 hover:text-red-400 text-zinc-500 transition-colors"
+          title="Delete field"
         >
           <Trash2 size={11} />
         </button>
@@ -108,7 +109,7 @@ function FieldEditor({
           value={field.value ?? ""}
           onChange={(e) => onChange({ value: e.target.value })}
           placeholder="Enter text…"
-          className="w-full text-xs px-2 py-1 border border-neutral-200 rounded resize-none focus:outline-none focus:border-purple-400"
+          className="w-full text-xs px-2.5 py-1.5 border border-white/5 rounded-lg resize-none focus:outline-none focus:border-purple-500/50 bg-zinc-950/50 text-zinc-100 placeholder:text-zinc-500"
           rows={2}
         />
       ) : (
@@ -162,7 +163,7 @@ function ImageFieldUpload({
       target: dashboardRef.current,
       inline: true,
       width: "100%",
-      height: 280,
+      height: 260,
       hideUploadButton: false,
       proudlyDisplayPoweredByUppy: false,
       hideProgressDetails: false,
@@ -178,19 +179,19 @@ function ImageFieldUpload({
   return (
     <div className="space-y-1">
       {value ? (
-        <div className="relative group">
+        <div className="relative group rounded-lg overflow-hidden border border-white/10 bg-zinc-950/20">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={value} alt="" className="w-full h-24 object-cover rounded border border-neutral-200" />
-          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center gap-2 rounded">
+          <img src={value} alt="" className="w-full h-24 object-cover" />
+          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition duration-150 flex items-center justify-center gap-2">
             <button
               onClick={() => setModalOpen(true)}
-              className="text-white text-[10px] bg-white/20 backdrop-blur px-2 py-1 rounded hover:bg-white/30"
+              className="text-[10px] bg-white/10 hover:bg-white/20 text-zinc-200 border border-white/5 backdrop-blur-sm px-2 py-1 rounded-md transition-colors"
             >
               Replace
             </button>
             <button
               onClick={() => onChange("")}
-              className="text-white text-[10px] bg-white/20 backdrop-blur px-2 py-1 rounded hover:bg-white/30"
+              className="text-[10px] bg-white/10 hover:bg-white/20 text-zinc-200 border border-white/5 backdrop-blur-sm px-2 py-1 rounded-md transition-colors"
             >
               Remove
             </button>
@@ -199,26 +200,26 @@ function ImageFieldUpload({
       ) : (
         <button
           onClick={() => setModalOpen(true)}
-          className="w-full flex items-center gap-2 text-xs px-2 py-1.5 border border-neutral-200 rounded cursor-pointer hover:bg-neutral-50"
+          className="w-full flex items-center justify-center gap-1.5 text-xs px-2.5 py-1.5 border border-white/5 bg-zinc-950/40 rounded-lg cursor-pointer hover:bg-white/10 text-zinc-300 transition-colors"
         >
-          <Upload size={11} /> Upload Image
+          <Upload size={10} /> Upload Image
         </button>
       )}
 
       {/* Upload Modal Overlay */}
       {modalOpen && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-xl shadow-2xl w-[480px] max-w-[90vw] overflow-hidden">
-            <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-200">
-              <h3 className="text-sm font-semibold">Upload Image</h3>
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/75 backdrop-blur-md" onClick={() => setModalOpen(false)}>
+          <div className="bg-zinc-950 border border-white/10 rounded-2xl shadow-2xl w-[480px] max-w-[90vw] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-4 py-3.5 border-b border-white/5 text-zinc-100">
+              <h3 className="text-sm font-bold">Upload Image</h3>
               <button
                 onClick={() => setModalOpen(false)}
-                className="p-1 rounded hover:bg-neutral-100"
+                className="p-1 rounded-md hover:bg-white/10 text-zinc-400 hover:text-zinc-200 transition-colors"
               >
                 <X size={14} />
               </button>
             </div>
-            <div ref={dashboardRef} className="uppy-dashboard-container" />
+            <div ref={dashboardRef} className="uppy-dashboard-container bg-zinc-950 p-2" />
           </div>
         </div>
       )}

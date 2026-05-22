@@ -1,11 +1,12 @@
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
-import { runEventBus } from "@/lib/event-bus";
 
 export const dynamic = "force-dynamic";
 
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 export async function GET(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { userId } = await auth();
@@ -13,16 +14,17 @@ export async function GET(
   const { id } = await params;
   
   // Verify ownership ONLY if the run record already exists.
-  // If the run doesn't exist yet (due to race condition where stream connects
-  // before POST creates the DB row), we still allow the SSE stream.
   const run = await prisma.run.findFirst({ where: { id } });
   if (run && run.userId !== userId) {
     return new Response("unauthorized", { status: 401 });
   }
 
   const encoder = new TextEncoder();
+  const emittedNodeStatuses = new Map<string, string>();
+  let emittedRunFinish = false;
+
   const stream = new ReadableStream({
-    start(controller) {
+    async start(controller) {
       const send = (evt: unknown) => {
         try {
           controller.enqueue(encoder.encode(`data: ${JSON.stringify(evt)}\n\n`));
@@ -30,41 +32,70 @@ export async function GET(
           // Controller may be closed if client disconnected
         }
       };
+      
       send({ type: "hello", runId: id });
+      console.log(`[runs/stream] Opened SSE stream for runId=${id}`);
 
-      // Subscribe to live events AND get any buffered events we missed
-      const { unsubscribe, buffered } = runEventBus.subscribe(id, (evt) => {
-        send(evt);
-        if (evt.type === "run-finish") {
-          unsubscribe();
-          try { controller.close(); } catch { /* already closed */ }
-        }
-      });
+      try {
+        while (!req.signal.aborted) {
+          const freshRun = await prisma.run.findUnique({
+            where: { id },
+            include: { nodeRuns: true },
+          });
 
-      // Replay any buffered events that were emitted before we subscribed
-      let alreadyFinished = false;
-      for (const evt of buffered) {
-        send(evt);
-        if (evt.type === "run-finish") {
-          alreadyFinished = true;
+          if (!freshRun) {
+            await sleep(1000);
+            continue;
+          }
+
+          if (freshRun.userId !== userId) {
+            send({ type: "error", message: "unauthorized" });
+            try { controller.close(); } catch {}
+            break;
+          }
+
+          // Check each node status and emit events on transition
+          for (const nr of freshRun.nodeRuns) {
+            const prevStatus = emittedNodeStatuses.get(nr.nodeId);
+            if (prevStatus !== nr.status) {
+              emittedNodeStatuses.set(nr.nodeId, nr.status);
+              console.log(`[runs/stream] Node runId=${id} node=${nr.nodeId} state=${prevStatus ?? "none"} -> ${nr.status}`);
+
+              if (nr.status === "pending") {
+                send({ type: "node-queued", nodeId: nr.nodeId, nodeType: nr.nodeType });
+              } else if (nr.status === "running") {
+                send({ type: "node-start", nodeId: nr.nodeId, nodeType: nr.nodeType });
+              } else if (nr.status === "success") {
+                send({ type: "node-finish", nodeId: nr.nodeId, nodeType: nr.nodeType, output: nr.output });
+              } else if (nr.status === "error" || nr.status === "failed") {
+                send({ type: "node-error", nodeId: nr.nodeId, nodeType: nr.nodeType, error: nr.error || "Execution failed" });
+              }
+            }
+          }
+
+          const isFinalStatus = 
+            freshRun.status !== "running" &&
+            freshRun.status !== "pending" &&
+            freshRun.status !== "idle" &&
+            freshRun.status !== "queued";
+
+          if (isFinalStatus || freshRun.finishedAt) {
+            if (!emittedRunFinish) {
+              console.log(`[runs/stream] Workflow runId=${id} finished with status=${freshRun.status}`);
+              send({ type: "run-finish", status: freshRun.status });
+              emittedRunFinish = true;
+            }
+            try { controller.close(); } catch {}
+            break;
+          }
+
+          await sleep(1000);
         }
+      } catch (err) {
+        console.error(`[runs/stream] Error in SSE stream for runId=${id}:`, err);
+      } finally {
+        console.log(`[runs/stream] Closed SSE stream for runId=${id}`);
       }
-
-      if (alreadyFinished) {
-        unsubscribe();
-        try { controller.close(); } catch { /* already closed */ }
-        return;
-      }
-
-      // Also re-check the DB in case the run finished between our initial
-      // fetch and the subscribe call, and all events were already cleaned up
-      void prisma.run.findFirst({ where: { id } }).then((freshRun) => {
-        if (freshRun?.finishedAt && !alreadyFinished) {
-          unsubscribe();
-          send({ type: "run-finish" });
-          try { controller.close(); } catch { /* already closed */ }
-        }
-      });
     },
   });
 

@@ -27,6 +27,7 @@ interface CanvasState {
   edges: FlowEdge[];
   selectedIds: Set<string>;
   runningNodeIds: Set<string>;
+  nodeStates: Record<string, 'idle' | 'queued' | 'running' | 'success' | 'failed'>;
   isRunning: boolean;           // global running flag for UI
   runRequest: string | null;    // nodeId to run, or 'full' for all
   past: HistoryEntry[];
@@ -47,6 +48,9 @@ interface CanvasState {
   updateNodeData: (id: string, patch: Partial<NodeData>) => void;
   setRunning: (ids: string[]) => void;
   markRunning: (id: string, running: boolean) => void;
+  setNodeState: (id: string, state: 'idle' | 'queued' | 'running' | 'success' | 'failed') => void;
+  setAllNodeStates: (states: Record<string, 'idle' | 'queued' | 'running' | 'success' | 'failed'>) => void;
+  resetNodeStates: () => void;
   setIsRunning: (v: boolean) => void;
   requestRun: (nodeId?: string) => void;  // called from node Run buttons
   clearRunRequest: () => void;
@@ -88,14 +92,17 @@ export const useCanvas = create<CanvasState>((set, get) => ({
   edges: [],
   selectedIds: new Set(),
   runningNodeIds: new Set(),
+  nodeStates: {},
   isRunning: false,
   runRequest: null,
   past: [],
   future: [],
   dirty: false,
 
-  init: ({ workflowId, name, nodes, edges }) =>
-    set({ workflowId, name, nodes, edges, past: [], future: [], dirty: false }),
+  init: ({ workflowId, name, nodes, edges }) => {
+    const selectedIds = new Set(nodes.filter((n) => n.selected).map((n) => n.id));
+    set({ workflowId, name, nodes, edges, selectedIds, past: [], future: [], dirty: false, nodeStates: {} });
+  },
 
   setName: (name) => set({ name, dirty: true }),
 
@@ -107,8 +114,11 @@ export const useCanvas = create<CanvasState>((set, get) => ({
       }
       return true;
     });
+    const nextNodes = applyNodeChanges(filtered, get().nodes);
+    const selectedIds = new Set(nextNodes.filter((n) => n.selected).map((n) => n.id));
     set({
-      nodes: applyNodeChanges(filtered, get().nodes),
+      nodes: nextNodes,
+      selectedIds,
       dirty: true,
     });
   },
@@ -173,13 +183,50 @@ export const useCanvas = create<CanvasState>((set, get) => ({
     });
   },
 
-  setRunning: (ids) => set({ runningNodeIds: new Set(ids), isRunning: ids.length > 0 }),
+  setRunning: (ids) => {
+    const nextRunning = new Set(ids);
+    const nextStates = { ...get().nodeStates };
+    // Set all matching to running and others to idle/queued as needed (for backwards compatibility)
+    for (const id of get().nodes.map((n) => n.id)) {
+      if (nextRunning.has(id)) {
+        nextStates[id] = "running";
+      } else if (nextStates[id] === "running") {
+        nextStates[id] = "idle";
+      }
+    }
+    set({ runningNodeIds: nextRunning, isRunning: ids.length > 0, nodeStates: nextStates });
+  },
   markRunning: (id, running) => {
     const next = new Set(get().runningNodeIds);
     if (running) next.add(id);
     else next.delete(id);
-    set({ runningNodeIds: next, isRunning: next.size > 0 });
+    
+    const nextStates = { ...get().nodeStates, [id]: (running ? "running" : "idle") as "running" | "idle" };
+    set({ runningNodeIds: next, isRunning: next.size > 0, nodeStates: nextStates });
   },
+  setNodeState: (id, state) => set((s) => {
+    const nextStates = { ...s.nodeStates, [id]: state };
+    const nextRunning = new Set(s.runningNodeIds);
+    if (state === "running") nextRunning.add(id);
+    else nextRunning.delete(id);
+    return {
+      nodeStates: nextStates,
+      runningNodeIds: nextRunning,
+      isRunning: nextRunning.size > 0,
+    };
+  }),
+  setAllNodeStates: (states) => set((s) => {
+    const nextRunning = new Set<string>();
+    for (const [id, st] of Object.entries(states)) {
+      if (st === "running") nextRunning.add(id);
+    }
+    return {
+      nodeStates: states,
+      runningNodeIds: nextRunning,
+      isRunning: nextRunning.size > 0,
+    };
+  }),
+  resetNodeStates: () => set({ nodeStates: {}, runningNodeIds: new Set(), isRunning: false }),
   setIsRunning: (v) => set({ isRunning: v }),
   requestRun: (nodeId) => set({ runRequest: nodeId ?? "full" }),
   clearRunRequest: () => set({ runRequest: null }),
@@ -196,9 +243,11 @@ export const useCanvas = create<CanvasState>((set, get) => ({
     const { past, future, nodes, edges } = get();
     if (past.length === 0) return;
     const prev = past[past.length - 1];
+    const selectedIds = new Set(prev.nodes.filter((n) => n.selected).map((n) => n.id));
     set({
       nodes: prev.nodes,
       edges: prev.edges,
+      selectedIds,
       past: past.slice(0, -1),
       future: [...future, { nodes, edges }],
       dirty: true,
@@ -209,9 +258,11 @@ export const useCanvas = create<CanvasState>((set, get) => ({
     const { past, future, nodes, edges } = get();
     if (future.length === 0) return;
     const next = future[future.length - 1];
+    const selectedIds = new Set(next.nodes.filter((n) => n.selected).map((n) => n.id));
     set({
       nodes: next.nodes,
       edges: next.edges,
+      selectedIds,
       future: future.slice(0, -1),
       past: [...past, { nodes, edges }],
       dirty: true,
@@ -220,6 +271,8 @@ export const useCanvas = create<CanvasState>((set, get) => ({
 
   clearDirty: () => set({ dirty: false }),
 
-  loadGraph: (nodes, edges) =>
-    set({ nodes, edges, past: [], future: [], dirty: true }),
+  loadGraph: (nodes, edges) => {
+    const selectedIds = new Set(nodes.filter((n) => n.selected).map((n) => n.id));
+    set({ nodes, edges, selectedIds, past: [], future: [], dirty: true, nodeStates: {} });
+  },
 }));

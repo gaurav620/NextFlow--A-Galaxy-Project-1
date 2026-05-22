@@ -5,6 +5,7 @@ import { useState } from "react";
 import { ArrowLeft, Play, Clock, Download, Upload, Loader2, Timer, Coins } from "lucide-react";
 import { useCanvas, type FlowNode, type FlowEdge } from "@/stores/canvas";
 import { useRun } from "@/lib/use-run";
+import { UserButton } from "@clerk/nextjs";
 
 interface Props {
   workflowId: string;
@@ -14,8 +15,17 @@ interface Props {
 export function CanvasTopBar({ workflowId, onToggleHistory }: Props) {
   const name = useCanvas((s) => s.name);
   const setName = useCanvas((s) => s.setName);
+  const selectedIds = useCanvas((s) => s.selectedIds);
   const [editing, setEditing] = useState(false);
   const { running, run } = useRun(workflowId);
+
+  const handleRun = () => {
+    if (selectedIds.size > 1) {
+      run("partial", Array.from(selectedIds));
+    } else {
+      run("full");
+    }
+  };
 
   const exportJson = () => {
     const state = useCanvas.getState();
@@ -57,12 +67,12 @@ export function CanvasTopBar({ workflowId, onToggleHistory }: Props) {
   };
 
   return (
-    <header className="h-14 px-4 flex items-center justify-between border-b border-neutral-200 bg-white shrink-0">
+    <header className="h-14 px-4 flex items-center justify-between border-b border-white/5 bg-zinc-950/80 backdrop-blur-md text-white shrink-0">
       {/* Left: back + name */}
       <div className="flex items-center gap-2 min-w-0">
         <Link
           href="/dashboard"
-          className="p-1.5 rounded-md hover:bg-neutral-100 text-neutral-500 hover:text-neutral-900 transition-colors shrink-0"
+          className="p-1.5 rounded-md hover:bg-white/10 text-zinc-400 hover:text-white transition-colors shrink-0"
           title="Back to workflows"
         >
           <ArrowLeft size={15} />
@@ -76,12 +86,12 @@ export function CanvasTopBar({ workflowId, onToggleHistory }: Props) {
             onKeyDown={(e) => {
               if (e.key === "Enter" || e.key === "Escape") setEditing(false);
             }}
-            className="text-sm font-semibold px-2 py-1 border border-purple-400 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-300 bg-white max-w-48"
+            className="text-sm font-semibold px-2 py-1 border border-purple-500 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500/30 bg-zinc-900 text-white max-w-48"
           />
         ) : (
           <button
             onClick={() => setEditing(true)}
-            className="text-sm font-semibold px-2 py-1 rounded-md hover:bg-neutral-100 text-neutral-900 truncate max-w-48"
+            className="text-sm font-semibold px-2 py-1 rounded-md hover:bg-white/10 text-zinc-100 truncate max-w-48"
             title="Click to rename"
           >
             {name}
@@ -93,12 +103,12 @@ export function CanvasTopBar({ workflowId, onToggleHistory }: Props) {
       <div className="flex items-center gap-1.5">
         {/* Est / Bal pills — Magica style */}
         <div className="hidden md:flex items-center gap-1.5 mr-1">
-          <div className="flex items-center gap-1 px-2.5 py-1 rounded-md border border-neutral-200 bg-neutral-50 text-xs text-neutral-600">
-            <Timer size={11} className="text-neutral-400" />
+          <div className="flex items-center gap-1 px-2.5 py-1 rounded-md border border-white/5 bg-zinc-900/50 text-xs text-zinc-400">
+            <Timer size={11} className="text-zinc-500" />
             <span>Est 0.01 M</span>
           </div>
-          <div className="flex items-center gap-1 px-2.5 py-1 rounded-md border border-neutral-200 bg-neutral-50 text-xs text-neutral-600">
-            <Coins size={11} className="text-neutral-400" />
+          <div className="flex items-center gap-1 px-2.5 py-1 rounded-md border border-white/5 bg-zinc-900/50 text-xs text-zinc-400">
+            <Coins size={11} className="text-zinc-500" />
             <span>Bal 30.33 M</span>
           </div>
         </div>
@@ -106,7 +116,7 @@ export function CanvasTopBar({ workflowId, onToggleHistory }: Props) {
         {/* Import */}
         <button
           onClick={importJson}
-          className="p-2 rounded-md text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900 transition-colors"
+          className="p-2 rounded-md text-zinc-400 hover:bg-white/10 hover:text-white transition-colors"
           title="Import JSON"
         >
           <Upload size={15} />
@@ -115,7 +125,7 @@ export function CanvasTopBar({ workflowId, onToggleHistory }: Props) {
         {/* Export */}
         <button
           onClick={exportJson}
-          className="p-2 rounded-md text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900 transition-colors"
+          className="p-2 rounded-md text-zinc-400 hover:bg-white/10 hover:text-white transition-colors"
           title="Export JSON"
         >
           <Download size={15} />
@@ -124,7 +134,7 @@ export function CanvasTopBar({ workflowId, onToggleHistory }: Props) {
         {/* History */}
         <button
           onClick={onToggleHistory}
-          className="p-2 rounded-md text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900 transition-colors"
+          className="p-2 rounded-md text-zinc-400 hover:bg-white/10 hover:text-white transition-colors"
           title="Execution History"
         >
           <Clock size={15} />
@@ -132,18 +142,30 @@ export function CanvasTopBar({ workflowId, onToggleHistory }: Props) {
 
         {/* Run button — Magica style: bigger, purple, icon */}
         <button
-          onClick={() => run("full")}
+          onClick={handleRun}
           disabled={running}
           className="ml-1 inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-purple-600 text-white text-sm font-semibold hover:bg-purple-700 disabled:opacity-60 transition-all shadow-sm hover:shadow-md active:scale-95"
-          title="Run workflow"
+          title={selectedIds.size > 1 ? "Run selected nodes" : "Run workflow"}
         >
           {running ? (
             <Loader2 size={14} className="animate-spin" />
           ) : (
             <Play size={14} fill="currentColor" />
           )}
-          {!running && <span className="hidden md:inline">Run</span>}
+          {!running && (
+            <span className="hidden md:inline">
+              {selectedIds.size > 1 ? "Run Selection" : "Run"}
+            </span>
+          )}
         </button>
+
+        {/* Divider */}
+        <div className="w-px h-5 bg-white/10 mx-1" />
+
+        {/* Clerk User Button */}
+        <div className="flex items-center justify-center p-0.5 rounded-full hover:bg-white/10 transition-colors">
+          <UserButton />
+        </div>
       </div>
     </header>
   );

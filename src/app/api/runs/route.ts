@@ -3,9 +3,6 @@ import { auth } from "@clerk/nextjs/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { WorkflowGraphSchema } from "@/lib/types";
-import { executeWorkflow } from "@/lib/execute";
-import { runEventBus } from "@/lib/event-bus";
-import { after } from "next/server";
 
 export const dynamic = "force-dynamic";
 
@@ -63,23 +60,26 @@ export async function POST(req: Request) {
       },
     });
 
-    // Run execution in the background using Next.js after()
-    after(async () => {
-      try {
-        await executeWorkflow({
-          runId: run.id,
-          workflowId,
-          graph: graph as Parameters<typeof executeWorkflow>[0]["graph"],
-          scope,
-          targetNodeIds,
-          onEvent: (evt) => {
-            runEventBus.emit(run.id, evt);
-          },
-        });
-      } catch (execErr) {
-        console.error("[runs/route] background execution error:", execErr);
-      }
-    });
+    // Trigger the workflow orchestrator task asynchronously on Trigger.dev
+    try {
+      const { workflowOrchestratorTask } = await import("@/trigger/workflow-orchestrator");
+      const handle = await workflowOrchestratorTask.trigger({
+        runId: run.id,
+        workflowId,
+        graph: graph as any,
+        scope,
+        targetNodeIds,
+      });
+      console.log(`[runs/route] Triggered workflow-orchestrator task runId=${run.id} handleId=${handle.id}`);
+    } catch (triggerErr) {
+      console.error(`[runs/route] Failed to trigger workflow-orchestrator task for runId=${run.id}:`, triggerErr);
+      // Update database status of the Run so it doesn't hang in "running" if trigger fails
+      await prisma.run.update({
+        where: { id: run.id },
+        data: { status: "error", finishedAt: new Date() },
+      }).catch((dbErr) => console.error("[runs/route] Failed to update Run status on trigger failure:", dbErr));
+      return NextResponse.json({ error: "failed_to_trigger", message: String(triggerErr) }, { status: 500 });
+    }
 
     return NextResponse.json({ runId: run.id });
   } catch (err) {
