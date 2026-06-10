@@ -29,7 +29,7 @@ export function TypedHandle({
         height: 10,
         border: "2px solid var(--card-bg)",
         boxShadow: "0 0 0 1px rgba(0,0,0,0.12)",
-        top,
+        ...(top !== undefined ? { top } : {}),
       }}
     />
   );

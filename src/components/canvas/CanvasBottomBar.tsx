@@ -15,6 +15,7 @@ import { useReactFlow, useViewport } from "@xyflow/react";
 import { useState } from "react";
 import { useCanvas, type FlowNode } from "@/stores/canvas";
 import { NodePicker } from "@/components/canvas/NodePicker";
+import { exportWorkflowJson } from "@/lib/export";
 
 interface Props {
   showMinimap: boolean;
@@ -84,18 +85,7 @@ export function CanvasBottomBar({ showMinimap, onToggleMinimap }: Props) {
     setTimeout(() => rf.fitView({ padding: 0.2 }), 50);
   };
 
-  const exportJson = () => {
-    const state = useCanvas.getState();
-    const blob = new Blob(
-      [JSON.stringify({ version: 1, name: state.name, nodes: state.nodes, edges: state.edges }, null, 2)],
-      { type: "application/json" }
-    );
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = `${state.name || "workflow"}.json`;
-    a.click();
-    URL.revokeObjectURL(a.href);
-  };
+  const exportJson = exportWorkflowJson;
 
   return (
     <>

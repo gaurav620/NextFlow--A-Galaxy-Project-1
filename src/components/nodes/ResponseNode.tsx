@@ -59,7 +59,6 @@ export function ResponseNode({ id, data }: NodeProps) {
               type="text"
               side="left"
               id={src.targetHandle ?? `result_${idx}`}
-              top={28 + idx * 36}
             />
             <div className="flex-1 bg-neutral-50 dark:bg-zinc-900/50 rounded-lg border border-neutral-200 dark:border-white/5 px-2.5 py-1.5 min-w-0">
               <div className="flex items-center justify-between gap-2 min-w-0">
@@ -86,7 +85,6 @@ export function ResponseNode({ id, data }: NodeProps) {
             type="text"
             side="left"
             id="result"
-            top={28 + connectedSources.length * 36}
           />
           <div className="flex-1 bg-neutral-50 dark:bg-zinc-950/40 rounded-lg border border-dashed border-neutral-200 dark:border-white/10 px-2.5 py-1.5">
             <span className="text-[11px] text-neutral-400 dark:text-zinc-500 italic">Connect new input...</span>
@@ -115,7 +113,15 @@ export function ResponseNode({ id, data }: NodeProps) {
                 <CheckCircle2 size={12} />
                 <span className="text-[10px] font-bold uppercase tracking-wider">Output</span>
               </div>
-              {d.result.startsWith("http") && (d.result.includes("placehold") || d.result.includes("transloadit") || d.result.includes("cloudinary") || d.result.includes("amazon") || d.result.includes("uppy")) ? (
+              {(() => {
+                const isImageUrl = (url: string) => {
+                  if (!url.startsWith('http') && !url.startsWith('data:image/')) return false;
+                  if (url.startsWith('data:image/')) return true;
+                  const ext = url.split('?')[0].split('#')[0].split('.').pop()?.toLowerCase();
+                  return ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'avif', 'bmp'].includes(ext || '');
+                };
+                return isImageUrl(d.result);
+              })() ? (
                 <div className="mt-1">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img

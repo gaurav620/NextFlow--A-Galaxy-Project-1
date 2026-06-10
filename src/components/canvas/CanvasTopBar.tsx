@@ -3,10 +3,11 @@
 import Link from "next/link";
 import { useState } from "react";
 import { ArrowLeft, Play, Clock, Download, Upload, Loader2, Timer, Coins, Square } from "lucide-react";
-import { useCanvas, type FlowNode, type FlowEdge } from "@/stores/canvas";
+import { useCanvas } from "@/stores/canvas";
 import { useRun } from "@/lib/use-run";
 import { UserButton } from "@clerk/nextjs";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { exportWorkflowJson, importWorkflowJson } from "@/lib/export";
 
 interface Props {
   workflowId: string;
@@ -28,44 +29,8 @@ export function CanvasTopBar({ workflowId, onToggleHistory }: Props) {
     }
   };
 
-  const exportJson = () => {
-    const state = useCanvas.getState();
-    const blob = new Blob(
-      [JSON.stringify({ version: 1, name: state.name, nodes: state.nodes, edges: state.edges }, null, 2)],
-      { type: "application/json" }
-    );
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = `${state.name || "workflow"}.json`;
-    a.click();
-    URL.revokeObjectURL(a.href);
-  };
-
-  const importJson = () => {
-    const inp = document.createElement("input");
-    inp.type = "file";
-    inp.accept = "application/json";
-    inp.onchange = async () => {
-      const file = inp.files?.[0];
-      if (!file) return;
-      try {
-        const text = await file.text();
-        const raw = JSON.parse(text);
-        const { WorkflowGraphSchema } = await import("@/lib/types");
-        const result = WorkflowGraphSchema.safeParse(raw);
-        if (!result.success) {
-          const issues = result.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("\n");
-          alert(`Invalid workflow file:\n${issues}`);
-          return;
-        }
-        useCanvas.getState().loadGraph(result.data.nodes as FlowNode[], result.data.edges as FlowEdge[]);
-        if (raw.name) setName(raw.name);
-      } catch {
-        alert("Invalid workflow file — could not parse JSON");
-      }
-    };
-    inp.click();
-  };
+  const exportJson = exportWorkflowJson;
+  const importJson = () => importWorkflowJson(setName);
 
   return (
     <header className="h-14 px-4 flex items-center justify-between border-b border-neutral-200 dark:border-white/5 bg-white/90 dark:bg-zinc-950/80 backdrop-blur-md text-neutral-900 dark:text-white shrink-0">

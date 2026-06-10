@@ -40,7 +40,6 @@ export function RequestInputsNode({ id, data }: NodeProps) {
           <FieldEditor
             key={f.key}
             field={f}
-            top={idx * 56 + 28}
             onChange={(p) => updateField(f.key, p)}
             onRemove={() => removeField(f.key)}
           />
@@ -77,19 +76,17 @@ export function RequestInputsNode({ id, data }: NodeProps) {
 
 function FieldEditor({
   field,
-  top,
   onChange,
   onRemove,
 }: {
   field: RequestInputField;
-  top: number;
   onChange: (p: Partial<RequestInputField>) => void;
   onRemove: () => void;
 }) {
   const handleType = field.kind === "image_field" ? "image" : "text";
   return (
     <div className="rounded-lg border border-neutral-200 dark:border-white/5 bg-neutral-50 dark:bg-zinc-900/40 p-2.5 space-y-1.5 relative">
-      <TypedHandle type={handleType} side="right" id={field.key} top={top} />
+      <TypedHandle type={handleType} side="right" id={field.key} />
       <div className="flex items-center justify-between gap-2">
         <input
           value={field.label}

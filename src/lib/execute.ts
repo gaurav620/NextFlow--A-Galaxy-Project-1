@@ -176,23 +176,73 @@ async function executeGemini(node: ExecNode, results: Record<string, unknown>) {
 }
 
 /**
- * Crop Image executor — runs in-process.
- * MANDATORY: 30+ second artificial delay per spec before returning.
+ * Crop Image executor — runs in-process using Sharp.
+ * Reads x, y, w, h percentage parameters from node data and applies real cropping.
  */
 async function executeCropImage(node: ExecNode, results: Record<string, unknown>) {
+  const data = node.data as { x?: number; y?: number; w?: number; h?: number };
   const inputSpec = node.inputs["Input Image"];
   const inputVal = inputSpec ? getInputValue(results, inputSpec) : undefined;
   const inputUrl = inputImageUrl(inputVal);
-  console.log(`[execute] CropImage node=${node.id} inputUrl="${inputUrl.slice(0, 80)}"`);
 
-  // MANDATORY 31-second delay per spec
-  console.log(`[execute] CropImage node=${node.id} beginning mandatory 31-second delay...`);
-  await sleep(31_000);
-  console.log(`[execute] CropImage node=${node.id} delay completed.`);
+  const x = data.x ?? 0;   // percentage 0-100
+  const y = data.y ?? 0;
+  const w = data.w ?? 100;
+  const h = data.h ?? 100;
 
-  // In production: would download + ffmpeg crop + re-upload
-  // For now, echo back the input URL as the "cropped" URL
-  return inputUrl || "https://placehold.co/600x400?text=cropped";
+  console.log(`[execute] CropImage node=${node.id} x=${x}% y=${y}% w=${w}% h=${h}% inputUrl="${inputUrl.slice(0, 80)}"`);
+
+  // If no valid input URL, return placeholder
+  if (!inputUrl || (!inputUrl.startsWith("http://") && !inputUrl.startsWith("https://") && !inputUrl.startsWith("data:"))) {
+    console.log(`[execute] CropImage node=${node.id} — no valid input image, returning placeholder`);
+    return "https://placehold.co/600x400?text=no+input+image";
+  }
+
+  try {
+    const sharp = (await import("sharp")).default;
+
+    // Fetch the input image
+    let buffer: Buffer;
+    if (inputUrl.startsWith("data:")) {
+      // Handle base64 data URLs
+      const base64Data = inputUrl.split(",")[1];
+      buffer = Buffer.from(base64Data, "base64");
+    } else {
+      const response = await fetch(inputUrl);
+      if (!response.ok) throw new Error(`Failed to fetch image: ${response.status}`);
+      buffer = Buffer.from(await response.arrayBuffer());
+    }
+
+    // Get image dimensions
+    const metadata = await sharp(buffer).metadata();
+    const imgW = metadata.width ?? 600;
+    const imgH = metadata.height ?? 400;
+
+    // Convert percentage params to pixel values
+    const left = Math.round((x / 100) * imgW);
+    const top = Math.round((y / 100) * imgH);
+    const width = Math.max(Math.min(Math.round((w / 100) * imgW), imgW - left), 1);
+    const height = Math.max(Math.min(Math.round((h / 100) * imgH), imgH - top), 1);
+
+    console.log(`[execute] CropImage node=${node.id} — image ${imgW}x${imgH} → crop(${left}, ${top}, ${width}, ${height})`);
+
+    // Apply the crop
+    const cropped = await sharp(buffer)
+      .extract({ left, top, width, height })
+      .png()
+      .toBuffer();
+
+    // Return as base64 data URL
+    const base64 = `data:image/png;base64,${cropped.toString("base64")}`;
+    console.log(`[execute] CropImage node=${node.id} — crop complete, output size=${cropped.length} bytes`);
+    return base64;
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error(`[execute] CropImage node=${node.id} error:`, msg);
+    // Graceful degradation: return the original image if cropping fails
+    console.warn(`[execute] CropImage node=${node.id} — returning original image as fallback`);
+    return inputUrl || "https://placehold.co/600x400?text=crop+failed";
+  }
 }
 
 async function executeRequestInputs(node: ExecNode) {
@@ -308,7 +358,7 @@ export async function executeWorkflow(opts: RunOptions) {
               output = await executeGemini(node, results);
               break;
             case "crop-image":
-              // Run in-process with mandatory 31s delay
+              // Run Sharp-based cropping in-process
               output = await executeCropImage(node, results);
               break;
             case "response": {

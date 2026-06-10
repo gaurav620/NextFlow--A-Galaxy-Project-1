@@ -126,8 +126,12 @@ export const useCanvas = create<CanvasState>((set, get) => ({
     });
   },
 
-  onEdgesChange: (changes) =>
-    set({ edges: applyEdgeChanges(changes, get().edges), dirty: true }),
+  onEdgesChange: (changes) => {
+    if (changes.some((c) => c.type === "remove")) {
+      get().pushHistory();
+    }
+    set({ edges: applyEdgeChanges(changes, get().edges), dirty: true });
+  },
 
   onConnect: (conn) => {
     get().pushHistory();

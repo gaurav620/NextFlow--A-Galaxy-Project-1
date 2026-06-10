@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
-import { ChevronDown, ChevronRight, X, RefreshCw, ChevronDown as FilterArrow, Clock, Zap } from "lucide-react";
+import { ChevronDown, ChevronRight, X, RefreshCw, ChevronDown as FilterArrow, Clock, Zap, Copy, Check } from "lucide-react";
 import { cn } from "@/lib/cn";
 
 interface NodeRun {
@@ -92,9 +92,24 @@ function formatNodeOutput(output: unknown): string {
   return String(output).slice(0, 80);
 }
 
+function fullNodeOutput(output: unknown): string {
+  if (output == null) return "";
+  if (typeof output === "string") return output;
+  if (typeof output === "object") {
+    try {
+      return JSON.stringify(output, null, 2);
+    } catch {
+      return String(output);
+    }
+  }
+  return String(output);
+}
+
 export function HistoryPanel({ workflowId, open, onClose }: Props) {
   const [runs, setRuns] = useState<Run[]>([]);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [expandedNodeId, setExpandedNodeId] = useState<string | null>(null);
+  const [copiedNodeId, setCopiedNodeId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [tab, setTab] = useState<RunTab>("UI Runs");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("All");
@@ -167,6 +182,20 @@ export function HistoryPanel({ workflowId, open, onClose }: Props) {
       else next.add(id);
       return next;
     });
+    // Collapse any expanded node when toggling a run
+    setExpandedNodeId(null);
+  };
+
+  const toggleNode = (nodeRunId: string) => {
+    setExpandedNodeId((prev) => (prev === nodeRunId ? null : nodeRunId));
+  };
+
+  const copyNodeOutput = async (nodeRunId: string, text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedNodeId(nodeRunId);
+      setTimeout(() => setCopiedNodeId(null), 1500);
+    } catch { /* clipboard may be unavailable */ }
   };
 
   const filteredRuns = runs.filter((r) => {
@@ -320,32 +349,100 @@ export function HistoryPanel({ workflowId, open, onClose }: Props) {
                   <div
                     className={cn(
                       "overflow-hidden transition-[max-height] duration-200 ease-in-out",
-                      isExpanded ? "max-h-[400px]" : "max-h-0"
+                      isExpanded ? "max-h-[2000px]" : "max-h-0"
                     )}
                   >
-                    <div className="px-4 pb-3 space-y-1.5 bg-zinc-900/20">
+                    <div className="px-4 pb-3 space-y-0.5 bg-zinc-900/20">
                       {r.nodeRuns.length === 0 ? (
                         <p className="text-[10px] text-zinc-600 pl-7 py-2">No node runs recorded.</p>
                       ) : (
                         r.nodeRuns.map((nr) => {
                           const nMapped = mapStatus(nr.status);
+                          const isNodeExpanded = expandedNodeId === nr.id;
+                          const outputText = fullNodeOutput(nr.output);
                           return (
-                            <div key={nr.id} className="text-[11px] flex items-start gap-2 py-1 pl-7">
-                              <span className={cn("w-1.5 h-1.5 rounded-full shrink-0 mt-1", STATUS_DOT[nMapped] ?? "bg-zinc-600")} />
-                              <span className="font-semibold text-zinc-300 min-w-[90px] truncate">{nr.nodeType}</span>
-                              <span className="text-zinc-500 w-10 shrink-0 font-medium">
-                                {nr.durationMs != null ? `${(nr.durationMs / 1000).toFixed(1)}s` : ""}
-                              </span>
-                              <span
-                                className="flex-1 text-zinc-400 truncate"
-                                title={nr.error ?? formatNodeOutput(nr.output)}
+                            <div key={nr.id}>
+                              {/* Clickable node row */}
+                              <button
+                                onClick={() => toggleNode(nr.id)}
+                                className="w-full text-[11px] flex items-center gap-2 py-1.5 pl-5 pr-1 rounded-md hover:bg-white/5 transition-colors text-left group/node"
                               >
-                                {nr.error ? (
-                                  <span className="text-red-400">{nr.error}</span>
-                                ) : (
-                                  <span>{formatNodeOutput(nr.output)}</span>
+                                <ChevronRight
+                                  size={10}
+                                  className={cn(
+                                    "text-zinc-600 shrink-0 transition-transform duration-150",
+                                    isNodeExpanded && "rotate-90"
+                                  )}
+                                />
+                                <span className={cn("w-1.5 h-1.5 rounded-full shrink-0", STATUS_DOT[nMapped] ?? "bg-zinc-600")} />
+                                <span className="font-semibold text-zinc-300 min-w-[80px] truncate">{nr.nodeType}</span>
+                                <span className="text-zinc-500 w-10 shrink-0 font-medium">
+                                  {nr.durationMs != null ? `${(nr.durationMs / 1000).toFixed(1)}s` : ""}
+                                </span>
+                                <span className="flex-1 text-zinc-500 truncate">
+                                  {nr.error ? (
+                                    <span className="text-red-400/70">{nr.error.slice(0, 40)}</span>
+                                  ) : (
+                                    formatNodeOutput(nr.output)
+                                  )}
+                                </span>
+                              </button>
+
+                              {/* Expanded node detail panel */}
+                              <div
+                                className={cn(
+                                  "overflow-hidden transition-all duration-200 ease-in-out",
+                                  isNodeExpanded ? "max-h-[500px] opacity-100 mt-1 mb-1.5" : "max-h-0 opacity-0"
                                 )}
-                              </span>
+                              >
+                                <div className="ml-5 p-3 bg-zinc-900/60 dark:bg-zinc-900/60 border border-white/5 rounded-lg text-[11px] font-mono space-y-2">
+                                  {/* Duration */}
+                                  {nr.durationMs != null && (
+                                    <div className="flex items-center gap-2 text-zinc-500">
+                                      <Clock size={10} className="shrink-0" />
+                                      <span>Duration: <span className="text-zinc-300">{(nr.durationMs / 1000).toFixed(1)}s</span></span>
+                                    </div>
+                                  )}
+
+                                  {/* Error */}
+                                  {(nMapped === "error" || nMapped === "failed") && nr.error && (
+                                    <div className="text-red-400 bg-red-500/5 border border-red-500/10 rounded-md p-2 whitespace-pre-wrap break-words">
+                                      {nr.error}
+                                    </div>
+                                  )}
+
+                                  {/* Full output */}
+                                  {outputText && (
+                                    <div className="relative">
+                                      <pre className="max-h-64 overflow-y-auto text-zinc-300 whitespace-pre-wrap break-words bg-zinc-950/50 rounded-md p-2 border border-white/5 leading-relaxed">
+                                        <code>{outputText}</code>
+                                      </pre>
+                                    </div>
+                                  )}
+
+                                  {/* Copy button */}
+                                  {(outputText || nr.error) && (
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        copyNodeOutput(nr.id, nr.error || outputText);
+                                      }}
+                                      className={cn(
+                                        "flex items-center gap-1.5 text-[10px] px-2 py-1 rounded-md border transition-colors",
+                                        copiedNodeId === nr.id
+                                          ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                                          : "bg-zinc-800/60 text-zinc-400 border-white/5 hover:bg-white/10 hover:text-zinc-200"
+                                      )}
+                                    >
+                                      {copiedNodeId === nr.id ? (
+                                        <><Check size={10} /> Copied</>
+                                      ) : (
+                                        <><Copy size={10} /> Copy</>
+                                      )}
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
                             </div>
                           );
                         })
