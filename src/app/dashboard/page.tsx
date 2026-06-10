@@ -91,12 +91,12 @@ export default async function Dashboard() {
             {FEATURES.map(({ icon: Icon, title, desc }) => (
               <div
                 key={title}
-                className="rounded-xl border border-neutral-200 dark:border-white/8 bg-white dark:bg-zinc-900/30 p-5 hover:shadow-md transition-all duration-200 cursor-pointer group"
+                className="rounded-xl border border-neutral-200 dark:border-white/8 bg-white dark:bg-zinc-900/30 px-6 pt-6 pb-5 hover:shadow-md transition-all duration-200 cursor-pointer group"
               >
-                <div className="w-9 h-9 rounded-lg bg-neutral-100 dark:bg-white/5 flex items-center justify-center mb-3">
-                  <Icon size={18} className="text-neutral-700 dark:text-zinc-300" />
+                <div className="w-10 h-10 rounded-xl bg-neutral-100 dark:bg-white/5 flex items-center justify-center mb-4">
+                  <Icon size={20} className="text-neutral-700 dark:text-zinc-300" />
                 </div>
-                <h3 className="text-[14px] font-semibold text-neutral-900 dark:text-zinc-100 mb-1">{title}</h3>
+                <h3 className="text-[14px] font-bold text-neutral-900 dark:text-zinc-100 mb-1">{title}</h3>
                 <p className="text-[13px] text-neutral-500 dark:text-zinc-400 leading-relaxed">{desc}</p>
               </div>
             ))}
