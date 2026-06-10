@@ -12,6 +12,7 @@ import {
   Cpu,
   Terminal,
   Settings,
+  PanelLeftClose,
 } from "lucide-react";
 import { UserButton, useUser } from "@clerk/nextjs";
 import { cn } from "@/lib/cn";
@@ -31,11 +32,14 @@ export function DashboardSidebar() {
 
   return (
     <aside className="w-[160px] shrink-0 border-r border-neutral-200 dark:border-white/8 bg-white dark:bg-zinc-950 flex flex-col min-h-screen">
-      {/* Logo */}
-      <div className="px-4 pt-4 pb-2">
+      {/* Logo + sidebar toggle */}
+      <div className="flex items-center justify-between px-4 pt-4 pb-2">
         <span className="text-xl font-bold tracking-tight text-neutral-900 dark:text-zinc-100" style={{ fontFamily: "'Georgia', serif" }}>
           NextFlow
         </span>
+        <button className="p-1 rounded-md text-neutral-400 dark:text-zinc-500 hover:text-neutral-600 dark:hover:text-zinc-300 hover:bg-neutral-100 dark:hover:bg-white/5 transition-colors">
+          <PanelLeftClose size={14} />
+        </button>
       </div>
 
       {/* Action buttons */}

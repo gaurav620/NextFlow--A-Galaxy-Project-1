@@ -70,17 +70,17 @@ export default async function Dashboard() {
       <main className="flex-1 overflow-y-auto">
         <div className="max-w-[780px] mx-auto px-10 py-10">
 
-          {/* Welcome hero — exact Magica style: dashed border, no colored bg */}
-          <div className="border border-dashed border-neutral-300 dark:border-white/10 rounded-2xl px-8 py-8 mb-8">
-            {/* Badge pill */}
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-neutral-900 dark:bg-white/10 text-[11px] font-medium text-white dark:text-zinc-300 mb-5">
+          {/* Welcome hero — exact Magica style: green-tinted dashed border */}
+          <div className="border border-dashed border-neutral-300/80 dark:border-white/10 rounded-2xl px-8 pt-7 pb-8 mb-8">
+            {/* Badge pill — dark bg, white text */}
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-neutral-800 dark:bg-white/10 text-[11px] font-medium text-white dark:text-zinc-300 mb-5">
               <Sparkles size={11} />
               All-in-One AI Platform
             </div>
-            <h1 className="text-[28px] font-bold text-neutral-900 dark:text-zinc-100 tracking-tight leading-tight mb-3">
+            <h1 className="text-[32px] font-extrabold text-neutral-900 dark:text-zinc-100 tracking-tight leading-tight mb-3">
               Welcome to NextFlow
             </h1>
-            <p className="text-[14px] text-neutral-500 dark:text-zinc-400 leading-relaxed max-w-[420px]">
+            <p className="text-[14px] text-neutral-500 dark:text-zinc-400 leading-relaxed max-w-[440px]">
               Pick where you want to start — chat with an AI agent, build workflows,
               run models, or browse your library.
             </p>
