@@ -22,12 +22,12 @@ import { cn } from "@/lib/cn";
 import { SettingsModal } from "@/components/SettingsModal";
 
 const NAV = [
-  { label: "Tasks",     href: "/dashboard",            icon: MessageSquare },
-  { label: "Projects",  href: "/dashboard",            icon: FolderOpen },
-  { label: "Library",   href: "/dashboard",            icon: LayoutGrid },
-  { label: "Flow",      href: "/dashboard",            icon: GitBranch },
-  { label: "Nodes",     href: "/dashboard",            icon: Cpu },
-  { label: "API / MCP", href: "/dashboard",            icon: Terminal },
+  { label: "Tasks",     href: "/dashboard/tasks",    icon: MessageSquare },
+  { label: "Projects",  href: "/dashboard/projects",  icon: FolderOpen },
+  { label: "Library",   href: "/dashboard/library",   icon: LayoutGrid },
+  { label: "Flow",      href: "/dashboard/flow",      icon: GitBranch },
+  { label: "Nodes",     href: "/dashboard/nodes",     icon: Cpu },
+  { label: "API / MCP", href: "/dashboard/api",       icon: Terminal },
 ];
 
 interface Props {
@@ -42,8 +42,6 @@ export function DashboardSidebar({ collapsed, onToggle }: Props) {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const newTaskFormRef = useRef<HTMLFormElement>(null);
-
-  const activeLabel = "Tasks";
 
   return (
     <>
@@ -74,14 +72,14 @@ export function DashboardSidebar({ collapsed, onToggle }: Props) {
         {/* Action buttons */}
         {!collapsed && (
           <div className="px-3 py-1 space-y-0.5">
-            <button
-              onClick={() => newTaskFormRef.current?.requestSubmit()}
+            <Link
+              href="/dashboard"
               className="w-full flex items-center gap-2 px-2 py-1.5 text-[13px] text-neutral-600 dark:text-zinc-400 hover:bg-neutral-100 dark:hover:bg-white/5 rounded-md transition-colors"
             >
               <Plus size={14} className="text-neutral-400 dark:text-zinc-500" />
               New task
               <span className="ml-auto text-[10px] text-neutral-300 dark:text-zinc-600">⌘OO</span>
-            </button>
+            </Link>
             <button
               onClick={() => setSearchOpen(!searchOpen)}
               className="w-full flex items-center gap-2 px-2 py-1.5 text-[13px] text-neutral-600 dark:text-zinc-400 hover:bg-neutral-100 dark:hover:bg-white/5 rounded-md transition-colors"
@@ -108,13 +106,13 @@ export function DashboardSidebar({ collapsed, onToggle }: Props) {
         {/* Collapsed action buttons */}
         {collapsed && (
           <div className="px-2 py-1 space-y-0.5">
-            <button
-              onClick={() => newTaskFormRef.current?.requestSubmit()}
+            <Link
+              href="/dashboard"
               title="New task"
               className="w-full flex items-center justify-center p-2.5 text-neutral-400 dark:text-zinc-500 hover:text-neutral-600 dark:hover:text-zinc-300 hover:bg-neutral-100 dark:hover:bg-white/5 rounded-md transition-colors"
             >
               <Plus size={14} />
-            </button>
+            </Link>
             <button
               title="Search tasks"
               className="w-full flex items-center justify-center p-2.5 text-neutral-400 dark:text-zinc-500 hover:text-neutral-600 dark:hover:text-zinc-300 hover:bg-neutral-100 dark:hover:bg-white/5 rounded-md transition-colors"
@@ -127,7 +125,7 @@ export function DashboardSidebar({ collapsed, onToggle }: Props) {
         {/* Nav items */}
         <nav className="px-2 py-2 space-y-0.5 flex-1">
           {NAV.map(({ label, href, icon: Icon }) => {
-            const isActive = label === activeLabel;
+            const isActive = pathname === href || pathname.startsWith(href + "/");
             return (
               <Link
                 key={label}
@@ -147,7 +145,7 @@ export function DashboardSidebar({ collapsed, onToggle }: Props) {
             );
           })}
 
-          {/* No tasks yet text */}
+          {/* No tasks yet */}
           {!collapsed && (
             <div className="pt-6 px-2">
               <p className="text-[12px] text-neutral-400 dark:text-zinc-500">No tasks yet</p>
@@ -155,9 +153,8 @@ export function DashboardSidebar({ collapsed, onToggle }: Props) {
           )}
         </nav>
 
-        {/* Bottom section */}
+        {/* Bottom */}
         <div className={cn("pb-4 space-y-2", collapsed ? "px-2" : "px-3")}>
-          {/* Settings — opens modal */}
           <button
             onClick={() => setSettingsOpen(true)}
             title={collapsed ? "Settings" : undefined}
@@ -170,7 +167,6 @@ export function DashboardSidebar({ collapsed, onToggle }: Props) {
             {!collapsed && <span>Settings</span>}
           </button>
 
-          {/* Claim Offer button */}
           {!collapsed && (
             <button className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-purple-500 text-white text-[13px] font-semibold hover:from-purple-700 hover:to-purple-600 transition-all shadow-sm active:scale-[0.98]">
               <span className="text-sm">🎁</span>
@@ -178,7 +174,6 @@ export function DashboardSidebar({ collapsed, onToggle }: Props) {
             </button>
           )}
 
-          {/* User profile */}
           <div className={cn("flex items-center gap-2", collapsed ? "justify-center" : "px-1 py-1")}>
             <UserButton />
             {!collapsed && user && (
@@ -190,10 +185,6 @@ export function DashboardSidebar({ collapsed, onToggle }: Props) {
         </div>
       </aside>
 
-      {/* Hidden form for New Task server action */}
-      <form ref={newTaskFormRef} action={createWorkflow} className="hidden" />
-
-      {/* Settings Modal */}
       <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </>
   );
