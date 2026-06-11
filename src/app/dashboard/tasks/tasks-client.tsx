@@ -1,9 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import Link from "next/link";
-import { Search, Plus } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Search, Plus, Trash2 } from "lucide-react";
+import { deleteWorkflow } from "@/app/actions/workflows";
 import { formatDistanceToNow } from "@/lib/format-date";
+import { cn } from "@/lib/cn";
 
 interface Task {
   id: string;
@@ -17,10 +20,36 @@ interface Props {
 
 export function TasksPageClient({ tasks }: Props) {
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectMode, setSelectMode] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [isPending, startTransition] = useTransition();
+  const router = useRouter();
 
   const filtered = tasks.filter((t) =>
     t.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const toggleSelect = (id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleDeleteSelected = () => {
+    if (!selected.size) return;
+    if (!confirm(`Delete ${selected.size} task(s)?`)) return;
+    startTransition(async () => {
+      for (const id of selected) {
+        await deleteWorkflow(id);
+      }
+      setSelected(new Set());
+      setSelectMode(false);
+      router.refresh();
+    });
+  };
 
   return (
     <main className="flex-1 overflow-y-auto">
@@ -52,9 +81,26 @@ export function TasksPageClient({ tasks }: Props) {
         {/* Tasks list header */}
         <div className="flex items-center justify-between mb-4 px-1">
           <p className="text-[13px] text-neutral-500 dark:text-zinc-400">Your tasks with NextFlow</p>
-          <button className="text-[13px] font-medium text-blue-600 dark:text-blue-400 hover:underline">
-            Select
-          </button>
+          <div className="flex items-center gap-2">
+            {selectMode && selected.size > 0 && (
+              <button
+                onClick={handleDeleteSelected}
+                disabled={isPending}
+                className="text-[13px] font-medium text-red-500 hover:underline disabled:opacity-50"
+              >
+                Delete ({selected.size})
+              </button>
+            )}
+            <button
+              onClick={() => { setSelectMode(!selectMode); setSelected(new Set()); }}
+              className={cn(
+                "text-[13px] font-medium hover:underline",
+                selectMode ? "text-neutral-900 dark:text-zinc-100" : "text-blue-600 dark:text-blue-400"
+              )}
+            >
+              {selectMode ? "Done" : "Select"}
+            </button>
+          </div>
         </div>
 
         {/* Tasks */}
@@ -65,19 +111,31 @@ export function TasksPageClient({ tasks }: Props) {
         ) : (
           <div className="space-y-1">
             {filtered.map((task) => (
-              <Link
+              <div
                 key={task.id}
-                href={`/workflow/${task.id}`}
-                className="flex items-center justify-between px-3 py-3 rounded-lg hover:bg-neutral-50 dark:hover:bg-white/5 transition-colors group"
+                className="flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-neutral-50 dark:hover:bg-white/5 transition-colors group"
               >
-                <div className="min-w-0">
-                  <p className="text-[14px] font-medium text-neutral-900 dark:text-zinc-100 truncate">{task.name}</p>
-                  <p className="text-[12px] text-neutral-400 dark:text-zinc-500">
-                    {formatDistanceToNow(task.updatedAt)}
-                  </p>
-                </div>
-                <span className="text-neutral-300 dark:text-zinc-600 opacity-0 group-hover:opacity-100 transition-opacity">→</span>
-              </Link>
+                {selectMode && (
+                  <input
+                    type="checkbox"
+                    checked={selected.has(task.id)}
+                    onChange={() => toggleSelect(task.id)}
+                    className="w-4 h-4 rounded border-neutral-300 dark:border-zinc-600 accent-purple-500"
+                  />
+                )}
+                <Link
+                  href={`/workflow/${task.id}`}
+                  className="flex items-center justify-between flex-1 min-w-0"
+                >
+                  <div className="min-w-0">
+                    <p className="text-[14px] font-medium text-neutral-900 dark:text-zinc-100 truncate">{task.name}</p>
+                    <p className="text-[12px] text-neutral-400 dark:text-zinc-500">
+                      {formatDistanceToNow(task.updatedAt)}
+                    </p>
+                  </div>
+                  <span className="text-neutral-300 dark:text-zinc-600 opacity-0 group-hover:opacity-100 transition-opacity">→</span>
+                </Link>
+              </div>
             ))}
           </div>
         )}

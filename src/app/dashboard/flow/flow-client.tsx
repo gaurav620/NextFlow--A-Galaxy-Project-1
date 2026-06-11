@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Search, Plus, Upload, GitBranch, Workflow } from "lucide-react";
 import { createWorkflow, createSampleWorkflow } from "@/app/actions/workflows";
 import { formatDistanceToNow } from "@/lib/format-date";
@@ -18,6 +19,30 @@ interface Props {
 
 export function FlowPageClient({ workflows }: Props) {
   const [searchQuery, setSearchQuery] = useState("");
+  const importRef = useRef<HTMLInputElement>(null);
+  const router = useRouter();
+
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const raw = JSON.parse(text);
+      // Create a workflow with the imported graph
+      const res = await fetch("/api/workflows/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: raw.name || file.name.replace(".json", ""), graph: raw.graph || raw }),
+      });
+      if (!res.ok) throw new Error("Import failed");
+      const { id } = await res.json();
+      router.push(`/workflow/${id}`);
+    } catch {
+      alert("Invalid workflow file — could not parse JSON");
+    } finally {
+      if (importRef.current) importRef.current.value = "";
+    }
+  };
 
   const filtered = workflows.filter((w) =>
     w.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -25,6 +50,9 @@ export function FlowPageClient({ workflows }: Props) {
 
   return (
     <main className="flex-1 overflow-y-auto">
+      {/* Hidden file input for import */}
+      <input ref={importRef} type="file" accept=".json" className="hidden" onChange={handleImport} />
+
       <div className="max-w-[960px] mx-auto px-8 py-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-1">
@@ -33,7 +61,10 @@ export function FlowPageClient({ workflows }: Props) {
             <p className="text-[13px] text-neutral-400 dark:text-zinc-500">Build workflows or run models directly.</p>
           </div>
           <div className="flex items-center gap-2">
-            <button className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg border border-neutral-200 dark:border-white/10 text-[13px] font-medium text-neutral-600 dark:text-zinc-300 hover:bg-neutral-50 dark:hover:bg-white/5 transition-colors">
+            <button
+              onClick={() => importRef.current?.click()}
+              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg border border-neutral-200 dark:border-white/10 text-[13px] font-medium text-neutral-600 dark:text-zinc-300 hover:bg-neutral-50 dark:hover:bg-white/5 transition-colors"
+            >
               <Upload size={14} /> Import
             </button>
             <form action={createWorkflow}>
